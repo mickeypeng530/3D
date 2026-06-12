@@ -76,6 +76,7 @@
 
 <script type="module">
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createStage, getStage, getGroundLevel, Female } from "mannequin";
 
 /* ============================================================
@@ -143,6 +144,15 @@ function box(w, h, d, m, x, y, z, parent) {
   return mesh;
 }
 
+// 圓角盒(r = 圓角半徑,公尺)
+function rbox(w, h, d, r, m, x, y, z, parent) {
+  const mesh = new THREE.Mesh(new RoundedBoxGeometry(mm(w), mm(h), mm(d), 4, mm(r)), m);
+  mesh.position.set(mm(x), GL + mm(y), mm(z));
+  mesh.castShadow = mesh.receiveShadow = true;
+  (parent || scene).add(mesh);
+  return mesh;
+}
+
 /* ============================================================
    攝影室(地板 + 兩面牆)
    座標:後牆 z = -1.9,左牆 x = -2.2,地面 y = GL
@@ -174,13 +184,26 @@ const WS = { x: -0.9, faceZ: ROOM.backZ + 0.12 };  // 板面 z
 const wallStand = new THREE.Group();
 scene.add(wallStand);
 {
-  box(0.06, 2.3, 0.06, mat.metal, WS.x - 0.30, 1.15, ROOM.backZ + 0.05, wallStand);
-  box(0.06, 2.3, 0.06, mat.metal, WS.x + 0.30, 1.15, ROOM.backZ + 0.05, wallStand);
+  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x - 0.33, 1.15, ROOM.backZ + 0.05, wallStand);
+  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x + 0.33, 1.15, ROOM.backZ + 0.05, wallStand);
 }
 const wsCarriage = new THREE.Group();
 wallStand.add(wsCarriage);
 {
-  box(0.56, 0.60, 0.07, mat.panel, WS.x, 1.45, ROOM.backZ + 0.085, wsCarriage);   // 外殼(板心建在 1.45m,applyEquip 用差值平移)
+  // 拱頂外殼(仿實拍 wall bucky 造型):矩形 + 半圓頂,擠出 + 小倒角
+  const W = 0.60, straight = 0.50, R = W / 2;
+  const sh = new THREE.Shape();
+  sh.moveTo(mm(-R), 0);
+  sh.lineTo(mm(R), 0);
+  sh.lineTo(mm(R), mm(straight));
+  sh.absarc(0, mm(straight), mm(R), 0, Math.PI, false);
+  sh.lineTo(mm(-R), 0);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: mm(0.055), bevelEnabled: true, bevelThickness: mm(0.008), bevelSize: mm(0.008), bevelSegments: 3, curveSegments: 24 });
+  geo.translate(0, mm(-0.37), 0);   // 受像面中心(離殼底 0.37m)對齊原點
+  const housing = new THREE.Mesh(geo, mat.panel);
+  housing.position.set(mm(WS.x), GL + mm(1.45), mm(ROOM.backZ + 0.05));
+  housing.castShadow = housing.receiveShadow = true;
+  wsCarriage.add(housing);
   const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage); // 受像面 35x43
   act.receiveShadow = true;
 }
@@ -193,14 +216,14 @@ laser.castShadow = false;
    ============================================================ */
 const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
 {
-  box(1.4, TBL.topY - 0.05, 0.62, mat.metal, TBL.cx, (TBL.topY - 0.05) / 2, TBL.cz);   // 底座
-  box(TBL.w, 0.06, TBL.d, mat.table, TBL.cx, TBL.topY - 0.03, TBL.cz);                  // 檯面
+  rbox(1.35, TBL.topY - 0.10, 0.60, 0.02, mat.metal, TBL.cx, (TBL.topY - 0.10) / 2 + 0.01, TBL.cz);  // 底座(內縮,檯面懸浮感)
+  rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);                       // 圓邊檯面
 }
 const tblDet = new THREE.Group();
 scene.add(tblDet);
 {
-  box(0.46, 0.015, 0.38, mat.dark, 0, TBL.topY + 0.008, 0, tblDet);
-  const a = box(0.43, 0.004, 0.35, mat.active, 0, TBL.topY + 0.018, 0, tblDet);
+  rbox(0.46, 0.018, 0.38, 0.006, mat.dark, 0, TBL.topY + 0.009, 0, tblDet);
+  const a = box(0.43, 0.004, 0.35, mat.active, 0, TBL.topY + 0.019, 0, tblDet);
   a.receiveShadow = true;
 }
 
@@ -215,22 +238,52 @@ const column = new THREE.Mesh(new THREE.CylinderGeometry(mm(0.045), mm(0.045), 1
 column.castShadow = true;
 tubeRig.add(column);
 
+// 天花板吊架基座
+const ceilPlate = new THREE.Mesh(new RoundedBoxGeometry(mm(0.34), mm(0.05), mm(0.34), 4, mm(0.012)), mat.metal);
+ceilPlate.position.y = GL + mm(ROOM.h - 0.07);
+tubeRig.add(ceilPlate);
+
+// 吊柱與球管的接頭(不隨俯仰旋轉,掛在 rig 上跟隨高度)
+const yoke = new THREE.Mesh(new RoundedBoxGeometry(mm(0.10), mm(0.09), mm(0.12), 4, mm(0.02)), mat.metal);
+yoke.castShadow = true;
+tubeRig.add(yoke);
+
 const tubeHead = new THREE.Group();
 tubeRig.add(tubeHead);
 {
-  const housing = new THREE.Mesh(new THREE.CylinderGeometry(mm(0.11), mm(0.11), mm(0.42), 20), mat.panel);
+  // 膠囊形球管外殼(半球端蓋)
+  const housing = new THREE.Mesh(new THREE.CapsuleGeometry(mm(0.105), mm(0.30), 8, 24), mat.panel);
   housing.rotation.z = Math.PI / 2;
   housing.castShadow = true;
   tubeHead.add(housing);
-  const colli = new THREE.Mesh(new THREE.BoxGeometry(mm(0.17), mm(0.15), mm(0.17)), mat.dark);
-  colli.position.y = -mm(0.16);
+  // 圓角準直儀
+  const colli = new THREE.Mesh(new RoundedBoxGeometry(mm(0.20), mm(0.17), mm(0.20), 4, mm(0.02)), mat.panel);
+  colli.position.y = -mm(0.175);
   colli.castShadow = true;
   tubeHead.add(colli);
+  // 準直儀底部深色出光口
+  const aper = new THREE.Mesh(new THREE.BoxGeometry(mm(0.10), mm(0.012), mm(0.10)), mat.dark);
+  aper.position.y = -mm(0.262);
+  tubeHead.add(aper);
+  // 兩側白色把手(沿 Z 向)
+  for (const sx of [-1, 1]) {
+    const grip = new THREE.Mesh(new THREE.CapsuleGeometry(mm(0.014), mm(0.16), 4, 10), mat.panel);
+    grip.rotation.x = Math.PI / 2;
+    grip.position.set(sx * mm(0.135), -mm(0.175), 0);
+    grip.castShadow = true;
+    tubeHead.add(grip);
+    for (const sz of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(mm(0.010), mm(0.010), mm(0.05), 8), mat.panel);
+      post.rotation.z = Math.PI / 2;
+      post.position.set(sx * mm(0.115), -mm(0.175), sz * mm(0.06));
+      tubeHead.add(post);
+    }
+  }
 }
 
 // 光照野:半透明錐 + 十字 + spotlight(都掛在 tubeHead,local -Y 方向)
 const beamGroup = new THREE.Group();
-beamGroup.position.y = -mm(0.24);
+beamGroup.position.y = -mm(0.27);
 tubeHead.add(beamGroup);
 
 const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
@@ -345,6 +398,7 @@ function applyEquip() {
   tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
   tubeHead.position.y = GL + mm(S.tube.h);
   tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);
+  yoke.position.y = GL + mm(S.tube.h + 0.135);
   const colLen = mm(ROOM.h - 0.1 - S.tube.h);
   column.scale.y = colLen;
   column.position.y = GL + mm(S.tube.h) + colLen / 2;
@@ -372,7 +426,7 @@ function applyEquip() {
   if (cands.length) {
     const hit = cands.reduce((a, b) => (a.t < b.t ? a : b));
     const sid = hit.t / M;
-    L = Math.max(0.1, sid - 0.24);            // 視覺光束從準直儀出口開始
+    L = Math.max(0.1, sid - 0.27);            // 視覺光束從準直儀出口開始
     sidTxt = `${Math.round(sid * 100)} cm(至${hit.what})`;
   }
   beamGroup.visible = !!S.tube.beamOn;

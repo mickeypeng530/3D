@@ -12,6 +12,8 @@
 - ✅ 人偶:mannequin.js Female,50 個滑桿(全身位置 + 頭頸/軀幹/四肢關節)
 - ✅ 場景 preset 2 個:cspine-lateral(立位,SID 180)、ankle-ap(檯上坐姿,SID 100)
 - ✅ 截圖 PNG / 匯出匯入設定 JSON / 白底切換
+- ✅ 美術 pass:示範圖風格(灰肢體 + 藍衣人偶、粉紅雷射、灰藍場景、柔光)
+- ✅ 設備細節 pass:膠囊形球管殼 + 圓角準直儀 + 把手 + 接頭(yoke 掛 rig 不隨俯仰轉)、拱頂壁架殼(ExtrudeGeometry)、圓邊檯面(RoundedBoxGeometry)
 - ⏳ 待辦:更多 preset(目標:主站 47 筆缺照 view)、男性 / 兒童人偶切換、姿勢直接拖曳(目前只有滑桿)、preset 存進 localStorage 或檔案庫
 
 ## 3. 架構速覽
