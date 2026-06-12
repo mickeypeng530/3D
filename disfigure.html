@@ -215,12 +215,32 @@ const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
 beamGroup.add(beamMesh);
 const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
 beamGroup.add(crossLines);
-const spot = new THREE.SpotLight(0xfff0c8, 60, 0, 0.3, 0.35, 1.2);
+const spot = new THREE.SpotLight(0xfff0c8, 120, 0, 0.3, 0.22, 1.1);
 spot.castShadow = true;
+spot.shadow.mapSize.set(2048, 2048);
+spot.shadow.bias = -0.0005;
 beamGroup.add(spot);
 const spotTarget = new THREE.Object3D();
 beamGroup.add(spotTarget);
 spot.target = spotTarget;
+
+// 準直儀十字遮光條:讓 spotlight 投出真實十字陰影(打到人偶身上也看得到)
+{
+  const barMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+  for (const rot of [0, Math.PI / 2]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.002, 0.0035), barMat);
+    bar.rotation.y = rot;
+    bar.position.y = -0.055;
+    bar.castShadow = true;
+    beamGroup.add(bar);
+  }
+}
+
+// 體表雷射環(模擬定位雷射打在皮膚上,per-preset 指定位置與橢圓半徑)
+const laserRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.0035, 8, 64), mat.laser);
+laserRing.rotation.x = Math.PI / 2;
+laserRing.visible = false;
+scene.add(laserRing);
 
 function rebuildBeam(fieldW, fieldH, len) {
   const a = 0.02, W = fieldW / 2, H = fieldH / 2, L = len;
@@ -313,6 +333,7 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
     tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
+    ring: { x: -0.9, y: 1.50, z: -1.40, rx: 0.075, rz: 0.10 },   // 頸部雷射環
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
   "ankle-ap": {
@@ -337,6 +358,13 @@ function applyPreset(key) {
   Object.assign(S.det, p.det);
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
+  if (p.ring) {
+    laserRing.visible = true;
+    laserRing.position.set(p.ring.x, GL + p.ring.y, p.ring.z);
+    laserRing.scale.set(p.ring.rx, p.ring.rz, 1);   // torus 已繞 X 轉 90 度,local y -> 世界 z
+  } else {
+    laserRing.visible = false;
+  }
   applyAll();
   camera.position.set(p.cam.px, GL + p.cam.py, p.cam.pz);
   controls.target.set(p.cam.tx, GL + p.cam.ty, p.cam.tz);
