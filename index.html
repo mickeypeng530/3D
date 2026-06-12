@@ -60,6 +60,12 @@
 
   <select id="presetSel"></select>
   <div class="btnrow">
+    <button data-view="oblique">視角:斜 45</button>
+    <button data-view="front">正面</button>
+    <button data-view="side">側面</button>
+    <button data-view="top">正上方</button>
+  </div>
+  <div class="btnrow">
     <button id="btnShot">📷 截圖 PNG</button>
     <button id="btnBg">⬜ 白底切換</button>
   </div>
@@ -88,6 +94,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { positionGeometry, color, mix, step, float, abs } from "three/tsl";
 import { World, Man, scene, camera, renderer, controls, ground, light } from "disfigure";
 
 /* ============================================================
@@ -96,7 +103,8 @@ import { World, Man, scene, camera, renderer, controls, ground, light } from "di
 new World();
 if (ground) ground.visible = false;
 scene.background = new THREE.Color(0xc3ccd5);
-scene.add(new THREE.AmbientLight(0xffffff, 0.65));   // disfigure 預設無環境光
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);   // disfigure 預設無環境光
+scene.add(ambient);
 
 function fitViewport() {
   renderer.setSize(window.innerWidth || 1280, window.innerHeight || 720);
@@ -110,6 +118,17 @@ const GL = 0;   // disfigure 原生公尺單位,地面 y=0
 
 const figure = new Man(1.73);
 figure.frustumCulled = false;   // GPU 變形不更新 bounds
+
+// 病人服(仿示範圖藍色連身):TSL 用「模型空間高度」切色帶,不影響變形
+// 模型空間 y 0~1.785;disfigure 的 dress() 在此版為 no-op,故自己做
+{
+  const y = positionGeometry.y, x = positionGeometry.x;
+  const shorts = step(float(0.68), y).mul(step(y, float(1.06)));                               // 短褲帶(全寬)
+  const top = step(float(1.06), y).mul(step(y, float(1.46))).mul(step(abs(x), float(0.23)));   // 背心帶(排除手臂)
+  const mask = shorts.add(top).min(1);
+  figure.material.colorNode = mix(color("#bfc4cb"), color("#54749e"), mask);
+  figure.material.needsUpdate = true;
+}
 
 /* ============================================================
    「人不動,轉房間」架構:
@@ -127,7 +146,7 @@ const LIE_M = new THREE.Matrix4().makeBasis(
 );
 
 // 房間內自帶主光(隨房間旋轉,讓臥位圖的光影方向仍然「從上方來」)
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
 sun.position.set(0, 12, 6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -135,7 +154,7 @@ sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
 sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
 ROOMG.add(sun);
 ROOMG.add(sun.target);
-if (light) light.intensity = 0.35;   // 壓低 disfigure 的世界座標主光
+if (light) light.intensity = 0.25;   // 壓低 disfigure 的世界座標主光
 
 /* ============================================================
    材質與幾何 helper
@@ -300,7 +319,7 @@ const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
 beamGroup.add(beamMesh);
 const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
 beamGroup.add(crossLines);
-const spot = new THREE.SpotLight(0xfff0c8, 55, 0, 0.3, 0.22, 1.1);
+const spot = new THREE.SpotLight(0xfff0c8, 30, 0, 0.3, 0.22, 1.1);
 spot.position.set(0, 0, 0);   // SpotLight 預設 position=(0,1,0),不歸零會高 1m(光池變大變淡)
 spot.castShadow = true;
 spot.shadow.mapSize.set(2048, 2048);
@@ -613,6 +632,13 @@ function syncSliders() {
 }
 
 {
+  const g = addGroup("光線", true);
+  addSlider(g, "主光", 0, 3, 0.05, () => sun.intensity, v => sun.intensity = v);
+  addSlider(g, "環境光", 0, 1.5, 0.05, () => ambient.intensity, v => ambient.intensity = v);
+  addSlider(g, "光野亮度", 0, 200, 1, () => spot.intensity, v => spot.intensity = v);
+}
+
+{
   const g = addGroup("人物位置與朝向", true);
   addSlider(g, "位置 X (m)", -2.2, 2.4, 0.01, () => S.fig.x, v => S.fig.x = v);
   addSlider(g, "位置 Z (m)", -1.9, 2.1, 0.01, () => S.fig.z, v => S.fig.z = v);
@@ -658,6 +684,29 @@ for (const [k, p] of Object.entries(PRESETS)) {
   presetSel.appendChild(opt);
 }
 presetSel.addEventListener("change", () => applyPreset(presetSel.value));
+
+// 標準視角(以目前 controls.target 為中心,方向用「房間座標」算 -> 臥位場景也正確)
+const VIEW_DIRS = {
+  oblique: [0.8, 0.55, 0.8],
+  front:   [0, 0.18, 1],
+  side:    [1, 0.18, 0.001],
+  top:     [0.45, 1, 0.45]   // 純正上方會被球管擋住,略偏斜
+};
+function roomDir(x, y, z) {
+  return new THREE.Vector3(x, y, z).normalize().applyQuaternion(ROOMG.quaternion);
+}
+function setView(kind) {
+  const d = VIEW_DIRS[kind];
+  const t = controls.target.clone();
+  const dist = Math.max(1.2, camera.position.distanceTo(t));
+  const dir = roomDir(d[0], d[1], d[2]);
+  camera.position.copy(t).addScaledVector(dir, dist);
+  // 正上方視角時 up 不能與視線平行,改用房間 -z 當畫面上方;其他視角用房間 +y
+  camera.up.copy(kind === "top" ? roomDir(0, 0, -1) : roomDir(0, 1, 0));
+  controls.update();
+}
+document.querySelectorAll("#panel button[data-view]").forEach(b =>
+  b.addEventListener("click", () => setView(b.dataset.view)));
 
 function toast(msg) {
   const t = document.getElementById("toast");

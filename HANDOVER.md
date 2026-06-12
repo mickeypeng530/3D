@@ -58,7 +58,9 @@
   - SID 改在房間座標解析計算(S 的數值 + Euler YXZ),不依賴 world position
   - 內建 sun(DirectionalLight)放在 ROOMG 內隨房間轉,disfigure 的世界光壓到 0.35 → 臥位圖光影方向仍自然
   - 站立姿勢的足內旋 `leg.y ±12`、雙臂 `arm.z -72` 全部正常可用
-- **spotlight 光野強度:55**(120 在 SID 75cm 會過曝;修掉 SpotLight 預設位置 bug 後要重新校這個值)
+- **spotlight 光野強度:預設 30**(UI 有「光線」滑桿群可調主光/環境光/光野;120 在 SID 75cm 會過曝)
+- **病人服 = TSL colorNode 高度帶**(模型空間 y:短褲 0.68-1.06 全寬、背心 1.06-1.46 限 |x|<0.23 排除手臂)。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
+- **標準視角按鈕**(斜45/正面/側面/正上)方向用房間座標經 ROOMG 轉換,臥位也正確;正上方刻意偏斜 (0.45,1,0.45) 避開球管;臥位時「側面」≈ 從腳底看(房間座標語意),要更名再說
 
 ## 5. 接手者 cheatsheet
 
