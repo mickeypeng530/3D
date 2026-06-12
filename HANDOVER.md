@@ -65,6 +65,10 @@
 - **標準視角按鈕**(斜45/正面/側面/正上)方向用房間座標經 ROOMG 轉換,臥位也正確;正上方刻意偏斜 (0.45,1,0.45) 避開球管;臥位時「側面」≈ 從腳底看(房間座標語意),要更名再說
 - **視角滑桿**(水平角/垂直角/距離):球面角繞 controls.target,房間座標;滑鼠 orbit 後經 controls change 事件回寫滑桿
 - **定位雷射已整組移除**(2026-06-13 使用者決定):視覺主角 = 方形光野+十字。git 歷史有完整實作(牆線 gap + shader 皮膚紅線)要復活就 revert
+- 🔑 **disfigure 關節「軸位圖」(實測,鎖死軸寫入會被靜默吃掉,getJoint 讀回 0)**:
+  - leg: x屈髖 z外展(**y 鎖死**)/ **thigh: 只有 y**(大腿內外旋)/ knee: x z / **shin: 只有 y**(小腿旋轉)/ ankle: x z / foot: x
+  - arm: x y z 全活 / **elbow: 只有 y**(屈肘)/ **forearm: 只有 x**(旋前旋後)/ wrist: y z(x 鎖死)
+  - head/chest/waist/torso: 全活。新增滑桿前先 `figure[part][axis]=33` 寫入讀回驗證
 
 ## 5. 接手者 cheatsheet
 
