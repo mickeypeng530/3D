@@ -40,6 +40,16 @@
   <button id="btnShot">📷 截圖</button>
 </div>
 <div id="note">平滑人偶實驗版(disfigure)- 正式版請回 index.html</div>
+<div id="status" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
+  background:rgba(24,28,36,.92);color:#e6e9ef;padding:14px 22px;border-radius:10px;font-size:14px;
+  font-family:'Segoe UI','Microsoft JhengHei',sans-serif;max-width:80vw;white-space:pre-wrap;">3D 場景載入中...</div>
+
+<script>
+  // 全域錯誤顯示(遠端 debug 用)
+  window.__setStatus = msg => { const el = document.getElementById("status"); if (el) { el.style.display = msg ? "block" : "none"; el.textContent = msg || ""; } };
+  window.addEventListener("error", e => window.__setStatus("載入錯誤: " + (e.message || e.type) + "\n" + (e.filename || "")));
+  window.addEventListener("unhandledrejection", e => window.__setStatus("載入錯誤 (promise): " + (e.reason && e.reason.message || e.reason)));
+</script>
 
 <script type="module">
 import * as THREE from "three";
@@ -337,6 +347,7 @@ document.getElementById("btnShot").addEventListener("click", async () => {
 });
 
 applyPreset("cspine-lateral");
+window.__setStatus("");   // 載入完成,關掉狀態覆蓋層(之後若有錯誤會自動重現)
 
 window.__sim2 = { THREE, S, figure, scene, camera, renderer, controls, applyAll, applyPreset, setJoint, resetPose, PRESETS };
 </script>
