@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X光擺位 3D 模擬器 - 平滑人偶實驗版</title>
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; font-family:"Segoe UI","Microsoft JhengHei",sans-serif; }
+  canvas { display:block; }
+  #bar {
+    position:fixed; top:10px; left:10px; z-index:10; display:flex; gap:8px; flex-wrap:wrap;
+  }
+  #bar button {
+    background:rgba(24,28,36,.9); color:#e6e9ef; border:1px solid #495066; border-radius:8px;
+    padding:8px 14px; font-size:14px; cursor:pointer;
+  }
+  #bar button:hover { background:#3a4358; }
+  #note {
+    position:fixed; bottom:10px; left:10px; z-index:10; color:#3a4250; font-size:12px;
+    background:rgba(255,255,255,.65); padding:4px 10px; border-radius:6px;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.min.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.min.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.tsl.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/",
+    "disfigure": "https://cdn.jsdelivr.net/gh/boytchev/disfigure@main/dist/disfigure.min.js"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="bar">
+  <button data-p="cspine-lateral">頸椎側位</button>
+  <button data-p="ankle-ap">踝關節 AP</button>
+  <button id="btnShot">📷 截圖</button>
+</div>
+<div id="note">平滑人偶實驗版(disfigure)- 正式版請回 index.html</div>
+
+<script type="module">
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { World, Woman, scene, camera, renderer, controls, ground } from "disfigure";
+
+new World();
+if (ground) ground.visible = false;
+scene.background = new THREE.Color(0xc3ccd5);
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));   // disfigure 預設無環境光,人偶背光面會全黑
+
+// disfigure 原生單位 = 公尺,地面 y=0
+const GL = 0;
+const mm = m => m;
+
+const figure = new Woman(1.65);
+figure.frustumCulled = false;   // GPU 變形不更新 bounds,避免誤剔除
+
+// 不用 dress():原始灰模即示範圖質感(velour 在此光照下發黑,先擱置)
+// 模型原生就有腳趾(足部 view 可用),手指也有
+
+/* ---------- 材質與幾何 helper(同 index.html) ---------- */
+const mat = {
+  floor:  new THREE.MeshLambertMaterial({ color: 0xa9b5bf }),
+  wall:   new THREE.MeshLambertMaterial({ color: 0xd4dbe1 }),
+  metal:  new THREE.MeshLambertMaterial({ color: 0x9ba5af }),
+  dark:   new THREE.MeshLambertMaterial({ color: 0x3f4854 }),
+  panel:  new THREE.MeshLambertMaterial({ color: 0xf2f4f6 }),
+  active: new THREE.MeshLambertMaterial({ color: 0xfafcfe }),
+  table:  new THREE.MeshLambertMaterial({ color: 0xe6ebef }),
+  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.13, side: THREE.DoubleSide, depthWrite: false }),
+  laser:  new THREE.MeshBasicMaterial({ color: 0xff3d6e }),
+  cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
+};
+
+function box(w, h, d, m, x, y, z, parent) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, GL + y, z);
+  mesh.castShadow = mesh.receiveShadow = true;
+  (parent || scene).add(mesh);
+  return mesh;
+}
+function rbox(w, h, d, r, m, x, y, z, parent) {
+  const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, r), m);
+  mesh.position.set(x, GL + y, z);
+  mesh.castShadow = mesh.receiveShadow = true;
+  (parent || scene).add(mesh);
+  return mesh;
+}
+
+/* ---------- 房間 ---------- */
+const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
+{
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), mat.floor);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(ROOM.leftX + ROOM.w / 2, GL + 0.001, ROOM.backZ + ROOM.d / 2);
+  floor.receiveShadow = true;
+  scene.add(floor);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.h), mat.wall);
+  back.position.set(ROOM.leftX + ROOM.w / 2, GL + ROOM.h / 2, ROOM.backZ);
+  back.receiveShadow = true;
+  scene.add(back);
+  const left = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.d, ROOM.h), mat.wall);
+  left.rotation.y = Math.PI / 2;
+  left.position.set(ROOM.leftX, GL + ROOM.h / 2, ROOM.backZ + ROOM.d / 2);
+  left.receiveShadow = true;
+  scene.add(left);
+}
+
+/* ---------- 壁架 ---------- */
+const WS = { x: -0.9, faceZ: ROOM.backZ + 0.12 };
+const wsCarriage = new THREE.Group();
+scene.add(wsCarriage);
+{
+  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x - 0.33, 1.15, ROOM.backZ + 0.05, scene);
+  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x + 0.33, 1.15, ROOM.backZ + 0.05, scene);
+  const W = 0.60, straight = 0.50, R = W / 2;
+  const sh = new THREE.Shape();
+  sh.moveTo(-R, 0); sh.lineTo(R, 0); sh.lineTo(R, straight);
+  sh.absarc(0, straight, R, 0, Math.PI, false);
+  sh.lineTo(-R, 0);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.055, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 24 });
+  geo.translate(0, -0.37, 0);
+  const housing = new THREE.Mesh(geo, mat.panel);
+  housing.position.set(WS.x, GL + 1.45, ROOM.backZ + 0.05);
+  housing.castShadow = housing.receiveShadow = true;
+  wsCarriage.add(housing);
+  const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage);
+  act.receiveShadow = true;
+}
+const laser = box(1.5, 0.004, 0.004, mat.laser, WS.x, 1.4, WS.faceZ + 0.005, scene);
+laser.castShadow = false;
+
+/* ---------- 攝影檯 + 檯面偵檢板 ---------- */
+const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
+rbox(1.35, TBL.topY - 0.10, 0.60, 0.02, mat.metal, TBL.cx, (TBL.topY - 0.10) / 2 + 0.01, TBL.cz);
+rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);
+const tblDet = new THREE.Group();
+scene.add(tblDet);
+{
+  rbox(0.46, 0.018, 0.38, 0.006, mat.dark, 0, TBL.topY + 0.009, 0, tblDet);
+  const a = box(0.43, 0.004, 0.35, mat.active, 0, TBL.topY + 0.019, 0, tblDet);
+  a.receiveShadow = true;
+}
+
+/* ---------- 球管 ---------- */
+const tubeRig = new THREE.Group();
+scene.add(tubeRig);
+const column = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 16), mat.metal);
+column.castShadow = true;
+tubeRig.add(column);
+const ceilPlate = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.05, 0.34, 4, 0.012), mat.metal);
+ceilPlate.position.y = GL + ROOM.h - 0.07;
+tubeRig.add(ceilPlate);
+const yoke = new THREE.Mesh(new RoundedBoxGeometry(0.10, 0.09, 0.12, 4, 0.02), mat.metal);
+yoke.castShadow = true;
+tubeRig.add(yoke);
+
+const tubeHead = new THREE.Group();
+tubeRig.add(tubeHead);
+{
+  const housing = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.30, 8, 24), mat.panel);
+  housing.rotation.z = Math.PI / 2;
+  housing.castShadow = true;
+  tubeHead.add(housing);
+  const colli = new THREE.Mesh(new RoundedBoxGeometry(0.20, 0.17, 0.20, 4, 0.02), mat.panel);
+  colli.position.y = -0.175;
+  colli.castShadow = true;
+  tubeHead.add(colli);
+  const aper = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.012, 0.10), mat.dark);
+  aper.position.y = -0.262;
+  tubeHead.add(aper);
+  for (const sx of [-1, 1]) {
+    const grip = new THREE.Mesh(new THREE.CapsuleGeometry(0.014, 0.16, 4, 10), mat.panel);
+    grip.rotation.x = Math.PI / 2;
+    grip.position.set(sx * 0.135, -0.175, 0);
+    grip.castShadow = true;
+    tubeHead.add(grip);
+    for (const sz of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.05, 8), mat.panel);
+      post.rotation.z = Math.PI / 2;
+      post.position.set(sx * 0.115, -0.175, sz * 0.06);
+      tubeHead.add(post);
+    }
+  }
+}
+
+const beamGroup = new THREE.Group();
+beamGroup.position.y = -0.27;
+tubeHead.add(beamGroup);
+const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
+beamGroup.add(beamMesh);
+const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
+beamGroup.add(crossLines);
+const spot = new THREE.SpotLight(0xfff0c8, 60, 0, 0.3, 0.35, 1.2);
+spot.castShadow = true;
+beamGroup.add(spot);
+const spotTarget = new THREE.Object3D();
+beamGroup.add(spotTarget);
+spot.target = spotTarget;
+
+function rebuildBeam(fieldW, fieldH, len) {
+  const a = 0.02, W = fieldW / 2, H = fieldH / 2, L = len;
+  const v = [
+    [-a, 0, -a], [a, 0, -a], [a, 0, a], [-a, 0, a],
+    [-W, -L, -H], [W, -L, -H], [W, -L, H], [-W, -L, H]
+  ];
+  const idx = [0,4,5, 0,5,1,  1,5,6, 1,6,2,  2,6,7, 2,7,3,  3,7,4, 3,4,0,  4,6,5, 4,7,6];
+  const pos = new Float32Array(idx.length * 3);
+  idx.forEach((vi, i) => { pos[i*3] = v[vi][0]; pos[i*3+1] = v[vi][1]; pos[i*3+2] = v[vi][2]; });
+  beamMesh.geometry.dispose();
+  beamMesh.geometry = new THREE.BufferGeometry();
+  beamMesh.geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const y = -L + 0.01;
+  const cp = new Float32Array([ -W, y, 0,  W, y, 0,   0, y, -H,  0, y, H ]);
+  crossLines.geometry.dispose();
+  crossLines.geometry = new THREE.BufferGeometry();
+  crossLines.geometry.setAttribute("position", new THREE.BufferAttribute(cp, 3));
+  spot.angle = Math.min(1.2, Math.atan(Math.max(W, H) / L) * 1.15 + 0.02);
+  spotTarget.position.set(0, -L, 0);
+}
+
+/* ---------- 狀態 + 套用 ---------- */
+const S = {
+  fig:  { x: -0.9, z: -1.52, y: 0, rotY: 0 },
+  tube: { x: -0.9, z: 0.02, h: 1.42, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
+  ws:   { h: 1.42 },
+  det:  { x: 1.32, z: 0.55, on: 0 }
+};
+
+function applyAll() {
+  figure.position.set(S.fig.x, GL + S.fig.y, S.fig.z);
+  // 注意:旋轉必須下在 figure 本體(parent Group 會被變形 shader 忽略);
+  // 且大角度根旋轉會改變部分關節軸語意(disfigure v0.x 怪癖,HANDOVER 有記)
+  figure.rotation.set(0, THREE.MathUtils.degToRad(S.fig.rotY), THREE.MathUtils.degToRad(S.fig.rotZ || 0));
+
+  wsCarriage.position.y = S.ws.h - 1.45;
+  tblDet.visible = !!S.det.on;
+  tblDet.position.set(S.det.x, 0, S.det.z);
+  if (figure.update) figure.update();
+
+  tubeRig.position.set(S.tube.x, 0, S.tube.z);
+  tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
+  tubeHead.position.y = GL + S.tube.h;
+  tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);
+  yoke.position.y = GL + S.tube.h + 0.135;
+  const colLen = ROOM.h - 0.1 - S.tube.h;
+  column.scale.y = colLen;
+  column.position.y = GL + S.tube.h + colLen / 2;
+  laser.position.y = GL + S.tube.h;
+
+  const focal = new THREE.Vector3();
+  tubeHead.getWorldPosition(focal);
+  const q = new THREE.Quaternion();
+  beamGroup.getWorldQuaternion(q);
+  const dir = new THREE.Vector3(0, -1, 0).applyQuaternion(q);
+  let L = 1.2;
+  const cands = [];
+  if (Math.abs(dir.z) > 0.05) {
+    const t = (WS.faceZ - focal.z) / dir.z;
+    if (t > 0.3) cands.push(t);
+  }
+  if (Math.abs(dir.y) > 0.05) {
+    const planeY = GL + (S.det.on ? TBL.topY + 0.02 : TBL.topY);
+    const t = (planeY - focal.y) / dir.y;
+    if (t > 0.3) cands.push(t);
+  }
+  if (cands.length) L = Math.max(0.1, Math.min(...cands) - 0.27);
+  rebuildBeam(S.tube.fieldW, S.tube.fieldH, L);
+}
+
+/* ---------- 關節路徑 helper(disfigure:joint.x/y/z 度數) ---------- */
+const JOINT_PATHS = [
+  "head.x","head.y","head.z","chest.x","chest.y","chest.z","waist.x","waist.y","waist.z","torso.x","torso.y","torso.z",
+  "l_arm.x","l_arm.y","l_arm.z","l_elbow.y","l_elbow.z","l_forearm.y","l_wrist.x","l_wrist.z",
+  "r_arm.x","r_arm.y","r_arm.z","r_elbow.y","r_elbow.z","r_forearm.y","r_wrist.x","r_wrist.z",
+  "l_leg.x","l_leg.y","l_leg.z","l_thigh.y","l_knee.x","l_shin.y","l_ankle.x","l_ankle.z","l_foot.x",
+  "r_leg.x","r_leg.y","r_leg.z","r_thigh.y","r_knee.x","r_shin.y","r_ankle.x","r_ankle.z","r_foot.x"
+];
+function setJoint(path, v) {
+  const [part, axis] = path.split(".");
+  if (figure[part]) figure[part][axis] = v;
+}
+function resetPose() { for (const p of JOINT_PATHS) setJoint(p, 0); }
+
+/* ---------- Presets(資料驅動) ---------- */
+const PRESETS = {
+  "cspine-lateral": {
+    fig: { x: -0.9, z: -1.52, y: 0, rotY: 90 },
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
+    tube: { x: -0.9, z: 0.02, h: 1.42, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
+    ws: { h: 1.42 }, det: { x: 1.32, z: 0.55, on: 0 },
+    cam: { px: 1.4, py: 1.75, pz: 1.5, tx: -0.75, ty: 1.35, tz: -1.3 }
+  },
+  "ankle-ap": {
+    // 仰臥位(supine):rotZ=90 整體放倒,頭朝 -x、腳壓偵檢板
+    // 已知問題:根旋轉後左臂軸語意翻轉,暫以右臂為準(見 HANDOVER)
+    fig: { x: 1.30, z: 0.55, y: 0.80, rotY: 0, rotZ: 90 },
+    joints: {
+      "l_arm.z": -75, "r_arm.z": -75,
+      "l_ankle.x": -15, "r_ankle.x": -15
+    },
+    tube: { x: 1.30, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24 },
+    ws: { h: 1.45 }, det: { x: 1.30, z: 0.55, on: 1 },
+    cam: { px: 2.4, py: 1.6, pz: 2.2, tx: 0.9, ty: 0.85, tz: 0.5 }
+  }
+};
+
+function applyPreset(key) {
+  const p = PRESETS[key];
+  Object.assign(S.fig, p.fig);
+  Object.assign(S.tube, p.tube);
+  Object.assign(S.ws, p.ws);
+  Object.assign(S.det, p.det);
+  resetPose();
+  for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
+  applyAll();
+  camera.position.set(p.cam.px, GL + p.cam.py, p.cam.pz);
+  controls.target.set(p.cam.tx, GL + p.cam.ty, p.cam.tz);
+  controls.update();
+}
+
+document.querySelectorAll("#bar button[data-p]").forEach(b =>
+  b.addEventListener("click", () => applyPreset(b.dataset.p)));
+
+document.getElementById("btnShot").addEventListener("click", async () => {
+  if (renderer.renderAsync) await renderer.renderAsync(scene, camera); else renderer.render(scene, camera);
+  renderer.domElement.toBlob(b => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = "disfigure_shot.png";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+});
+
+applyPreset("cspine-lateral");
+
+window.__sim2 = { THREE, S, figure, scene, camera, renderer, controls, applyAll, applyPreset, setJoint, resetPose, PRESETS };
+</script>
+</body>
+</html>

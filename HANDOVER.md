@@ -14,7 +14,8 @@
 - ✅ 截圖 PNG / 匯出匯入設定 JSON / 白底切換
 - ✅ 美術 pass:示範圖風格(灰肢體 + 藍衣人偶、粉紅雷射、灰藍場景、柔光)
 - ✅ 設備細節 pass:膠囊形球管殼 + 圓角準直儀 + 把手 + 接頭(yoke 掛 rig 不隨俯仰轉)、拱頂壁架殼(ExtrudeGeometry)、圓邊檯面(RoundedBoxGeometry)
-- ⏳ 待辦:更多 preset(目標:主站 47 筆缺照 view)、男性 / 兒童人偶切換、姿勢直接拖曳(目前只有滑桿)、preset 存進 localStorage 或檔案庫
+- ✅ **disfigure 平滑人偶實驗版 `disfigure.html`**(2026-06-12 spike 成功):無縫平滑身體 + **原生腳趾/手指**,MIT 授權,質感 = 使用者的 3D 擺位示範圖。兩個 preset(cspine-lateral 立位 / ankle-ap 仰臥)已驗證
+- ⏳ 待辦:決定是否把 index.html 全面遷移到 disfigure(建議:是,UI 滑桿照搬 + 關節路徑換名)、臥位左臂軸向怪癖解法、更多 preset(目標:主站 47 筆缺照 view)、男性 / 兒童人偶切換
 
 ## 3. 架構速覽
 
@@ -33,6 +34,16 @@
 - **SID 從 tubeHead(焦點)起算**,光束視覺長度從準直儀出口(focal -0.24m)起算,別混用
 - **preview_screenshot 工具會 timeout**:用 `tools/shot_server.py`(port 8766)+ `__sim.renderer.render + toDataURL + fetch POST` 自製截圖管道
 - 全形標點字面值在本機檔案會被收斂成半形 → UI 文案避免依賴全形標點(同 Xray 專案鐵則)
+
+### disfigure 實驗版(disfigure.html)專屬坑
+- **GLB 模型要從 gh CDN 載**:`cdn.jsdelivr.net/gh/boytchev/disfigure@main/...`;npm 包沒含 assets,woman.glb 會 404
+- **改關節後必須 `figure.update()`** 才會生效(動畫迴圈死掉時尤其);關節是 `figure.l_arm.x/y/z` 度數
+- **場景必須補 AmbientLight**(disfigure 預設只有方向光,人偶背光面全黑)
+- **嵌入式 preview 的 rAF 不會跑**(0 次/500ms)→ World 動畫迴圈死的,自動截圖要手動 `renderer.renderAsync()`;真實瀏覽器正常
+- **躺臥姿勢**:旋轉必須下在 figure 本體(包 parent Group 會被變形 shader 無視);`rotation.set(0,0,90°)` = 仰臥頭朝 -x。**根旋轉後左臂的軸語意會翻轉**(v0.x 怪癖,l_arm.z 變成指天),右臂正常 — 待解
+- **`torso.x = ±90` 會讓人偶塌縮消失**,別用它放倒身體
+- **`figure.frustumCulled = false`**:GPU 變形不更新 bounds,大姿勢會被誤剔除
+- **髖屈 55-90 度之間不穩**(模糊變形,腿會穿檯面或翹天)→ 檯上 view 優先用仰臥,不用長坐姿
 
 ## 5. 接手者 cheatsheet
 
