@@ -94,8 +94,8 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4 } from "three/tsl";
-import { World, Man, scene, camera, renderer, controls, ground, light } from "disfigure";
+import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4, smoothstep, max } from "three/tsl";
+import { World, Man, scene, camera, renderer, controls, ground, light, cameraLight } from "disfigure";
 
 /* ============================================================
    World(disfigure 自帶 scene/camera/renderer/controls)
@@ -130,6 +130,27 @@ const uFieldW = uniform(0.24);
 const uFieldH = uniform(0.30);
 const uBeamLen = uniform(1.0);
 const uCrossOn = uniform(1);
+// 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
+// 套用在任何材質的 colorNode 上(人偶皮膚 + 牆/板/檯面),取代圓形 spotlight 光池
+function beamPaint(base) {
+  const posB = uBeamInv.mul(vec4(positionWorld, 1)).xyz;   // 光束局部(束軸 -Y)
+  const d = posB.y.negate();
+  const nearFade = smoothstep(float(0.05), float(0.15), d);
+  const farFade = smoothstep(uBeamLen.add(0.03), uBeamLen.add(0.30), d).oneMinus();
+  const halfW = uFieldW.mul(0.5).mul(d).div(uBeamLen);
+  const halfH = uFieldH.mul(0.5).mul(d).div(uBeamLen);
+  const inX = smoothstep(halfW.sub(0.015), halfW, abs(posB.x)).oneMinus();
+  const inZ = smoothstep(halfH.sub(0.015), halfH, abs(posB.z)).oneMinus();
+  const fieldMask = nearFade.mul(farFade).mul(inX).mul(inZ).mul(uCrossOn);
+  // 寬約 15mm 的軟邊十字陰影帶
+  const crossX = smoothstep(float(0.004), float(0.011), abs(posB.x)).oneMinus();
+  const crossZ = smoothstep(float(0.004), float(0.011), abs(posB.z)).oneMinus();
+  const crossBand = max(crossX, crossZ);
+  let c = base.add(color("#ffeab5").mul(fieldMask.mul(0.34)));
+  c = mix(c, c.mul(0.55), fieldMask.mul(crossBand));
+  return c;
+}
+
 {
   // 衣服:模型空間高度切色帶(y 0~1.785;dress() 在此版為 no-op)
   const y = positionGeometry.y, x = positionGeometry.x;
@@ -138,20 +159,8 @@ const uCrossOn = uniform(1);
   const clothMask = shorts.add(top).min(1);
   let c = mix(color("#bfc4cb"), color("#54749e"), clothMask);
 
-  // 光束局部座標(束軸 -Y,d = 沿束深度)
-  const posB = uBeamInv.mul(vec4(positionWorld, 1)).xyz;
-  const d = posB.y.negate();
-  const inRange = step(float(0.05), d).mul(step(d, uBeamLen.add(0.3)));
-  const halfW = uFieldW.mul(0.5).mul(d).div(uBeamLen);
-  const halfH = uFieldH.mul(0.5).mul(d).div(uBeamLen);
-  const inField = step(abs(posB.x), halfW).mul(step(abs(posB.z), halfH));
-  const fieldMask = inRange.mul(inField).mul(uCrossOn);
-
-  // 光野照亮(皮膚上的亮區)
-  c = c.add(color("#fff0c8").mul(fieldMask.mul(0.22)));
-  // 十字陰影線(沿光束中軸兩平面)
-  const crossLine = step(abs(posB.x), float(0.0035)).add(step(abs(posB.z), float(0.0035))).min(1);
-  c = mix(c, c.mul(0.45), fieldMask.mul(crossLine));
+  // 光野 + 十字(畫在皮膚上)
+  c = beamPaint(c);
   // 定位雷射(水平面 + 面向雷射來向 +z 的表面)
   const laserBand = step(abs(positionWorld.y.sub(uLaserY)), float(0.0042));
   const facing = step(float(-0.1), normalWorld.z);
@@ -186,19 +195,26 @@ sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
 ROOMG.add(sun);
 ROOMG.add(sun.target);
 if (light) light.intensity = 0.25;   // 壓低 disfigure 的世界座標主光
+if (cameraLight) cameraLight.intensity = 0.5;   // 相機跟隨光壓低(預設 1.4 會在板面打出圓形亮斑)
 
 /* ============================================================
    材質與幾何 helper
    ============================================================ */
+// 承光面(牆/板/檯)用 node material,光野矩形 + 十字直接畫上去
+function beamLambert(hex) {
+  const m = new THREE.MeshLambertNodeMaterial();
+  m.colorNode = beamPaint(color(hex));
+  return m;
+}
 const mat = {
-  floor:  new THREE.MeshLambertMaterial({ color: 0xa9b5bf }),
-  wall:   new THREE.MeshLambertMaterial({ color: 0xd4dbe1 }),
+  floor:  beamLambert("#a9b5bf"),
+  wall:   beamLambert("#d4dbe1"),
   metal:  new THREE.MeshLambertMaterial({ color: 0x9ba5af }),
   dark:   new THREE.MeshLambertMaterial({ color: 0x3f4854 }),
-  panel:  new THREE.MeshLambertMaterial({ color: 0xf2f4f6 }),
-  active: new THREE.MeshLambertMaterial({ color: 0xfafcfe }),
-  table:  new THREE.MeshLambertMaterial({ color: 0xe6ebef }),
-  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.13, side: THREE.DoubleSide, depthWrite: false }),
+  panel:  beamLambert("#f2f4f6"),
+  active: beamLambert("#fafcfe"),
+  table:  beamLambert("#e6ebef"),
+  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false }),   // 單面+低不透明度:避免多層疊成白盤
   laser:  new THREE.MeshBasicMaterial({ color: 0xff3d6e }),
   cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
 };
@@ -252,7 +268,7 @@ ROOMG.add(wsCarriage);
 {
   rbox(0.15, 0.24, 0.12, 0.02, mat.metal, WS.x, 1.45, ROOM.backZ + 0.165, wsCarriage);
   rbox(0.62, 0.66, 0.09, 0.03, mat.panel, WS.x, 1.45, ROOM.backZ + 0.19, wsCarriage);
-  const frame = box(0.50, 0.56, 0.006, new THREE.MeshLambertMaterial({ color: 0xd9dee4 }), WS.x, 1.45, WS.faceZ - 0.004, wsCarriage);
+  const frame = box(0.50, 0.56, 0.006, beamLambert("#d9dee4"), WS.x, 1.45, WS.faceZ - 0.004, wsCarriage);
   frame.castShadow = false;
   const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage);
   act.castShadow = false;
@@ -345,7 +361,7 @@ const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
 beamGroup.add(beamMesh);
 const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
 beamGroup.add(crossLines);
-const spot = new THREE.SpotLight(0xfff0c8, 30, 0, 0.3, 0.22, 1.1);
+const spot = new THREE.SpotLight(0xfff0c8, 0, 0, 0.3, 0.22, 1.1);   // 預設關閉:光野視覺全由 beamPaint 矩形著色;要氛圍光用「光野亮度」滑桿
 spot.position.set(0, 0, 0);   // SpotLight 預設 position=(0,1,0),不歸零會高 1m(光池變大變淡)
 spot.castShadow = true;
 spot.shadow.mapSize.set(2048, 2048);
