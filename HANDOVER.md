@@ -61,6 +61,7 @@
 - **spotlight 光野強度:預設 30**(UI 有「光線」滑桿群可調主光/環境光/光野;120 在 SID 75cm 會過曝)
 - **病人服 = TSL colorNode 高度帶**(模型空間 y:短褲 0.68-1.06 全寬、背心 1.06-1.46 限 |x|<0.23 排除手臂)。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
 - 🔑 **雷射/十字/光野「畫在皮膚上」(TSL,2026-06-13)**:同一個 colorNode 接著做三層 — ① 光野亮區:positionWorld 經 `uBeamInv`(beamGroup.matrixWorld 逆矩陣 uniform)轉光束局部座標,錐內(線性放大的 field 範圍)加暖色;② 十字:光束局部 |x|或|z| < 3.5mm 變暗;③ 雷射:`|positionWorld.y - uLaserY| < 4.2mm` 且 `normalWorld.z > -0.1`(只畫面向雷射源的表面)染紅。**任何視角都貼著身體輪廓**,完全取代會浮空的貼片(crossSkin/laserSkin 已刪),十字也不再需要逐 preset 手動標位。uniform 在 applyAll 末端更新(記得 `beamGroup.updateWorldMatrix` 後再 invert)。牆上雷射線仍是 L/R 兩段幾何(平面上貼片不會穿幫),gap 機制保留
+- **光野視覺規格(對照 Skull AP 實拍)**:柔邊「矩形」暖光 + 寬 ~15mm 軟邊十字陰影。承光面(牆/板/檯/偵檢板)用 `beamLambert()`(MeshLambertNodeMaterial + 共用 beamPaint TSL 鏈)。**spotlight 預設 0**(只當氛圍光,由滑桿開)。⚠️ 半透明光錐 DoubleSide 多層疊加會變白盤 → FrontSide + opacity 0.07
 - **標準視角按鈕**(斜45/正面/側面/正上)方向用房間座標經 ROOMG 轉換,臥位也正確;正上方刻意偏斜 (0.45,1,0.45) 避開球管;臥位時「側面」≈ 從腳底看(房間座標語意),要更名再說
 
 ## 5. 接手者 cheatsheet
