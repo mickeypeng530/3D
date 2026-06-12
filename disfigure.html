@@ -120,24 +120,21 @@ const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
 }
 
 /* ---------- 壁架 ---------- */
-const WS = { x: -0.9, faceZ: ROOM.backZ + 0.12 };
+// 壁架(仿示範圖):單根落地寬柱 + 深色內軌 + 圓角白色板匣(內框線)
+const WS = { x: -0.9, faceZ: ROOM.backZ + 0.24 };
+{
+  rbox(0.30, ROOM.h, 0.13, 0.02, mat.metal, WS.x, ROOM.h / 2, ROOM.backZ + 0.075, scene);   // 落地寬柱
+  box(0.10, ROOM.h - 0.04, 0.012, mat.dark, WS.x, ROOM.h / 2, ROOM.backZ + 0.142, scene);   // 內軌深色帶
+}
 const wsCarriage = new THREE.Group();
 scene.add(wsCarriage);
 {
-  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x - 0.33, 1.15, ROOM.backZ + 0.05, scene);
-  rbox(0.055, 2.3, 0.055, 0.015, mat.metal, WS.x + 0.33, 1.15, ROOM.backZ + 0.05, scene);
-  const W = 0.60, straight = 0.50, R = W / 2;
-  const sh = new THREE.Shape();
-  sh.moveTo(-R, 0); sh.lineTo(R, 0); sh.lineTo(R, straight);
-  sh.absarc(0, straight, R, 0, Math.PI, false);
-  sh.lineTo(-R, 0);
-  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.055, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 24 });
-  geo.translate(0, -0.37, 0);
-  const housing = new THREE.Mesh(geo, mat.panel);
-  housing.position.set(WS.x, GL + 1.45, ROOM.backZ + 0.05);
-  housing.castShadow = housing.receiveShadow = true;
-  wsCarriage.add(housing);
-  const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage);
+  rbox(0.15, 0.24, 0.12, 0.02, mat.metal, WS.x, 1.45, ROOM.backZ + 0.165, wsCarriage);      // 連接托架
+  rbox(0.62, 0.66, 0.09, 0.03, mat.panel, WS.x, 1.45, ROOM.backZ + 0.19, wsCarriage);       // 圓角白匣
+  const frame = box(0.50, 0.56, 0.006, new THREE.MeshLambertMaterial({ color: 0xd9dee4 }), WS.x, 1.45, WS.faceZ - 0.004, wsCarriage);  // 內框
+  frame.castShadow = false;
+  const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage);          // 受像面 35x43
+  act.castShadow = false;
   act.receiveShadow = true;
 }
 const laser = box(1.5, 0.004, 0.004, mat.laser, WS.x, 1.4, WS.faceZ + 0.005, scene);
@@ -193,6 +190,20 @@ tubeRig.add(tubeHead);
       post.rotation.z = Math.PI / 2;
       post.position.set(sx * 0.115, -0.175, sz * 0.06);
       tubeHead.add(post);
+    }
+  }
+  // 後方 C 形大把手(示範圖特徵)
+  const cHandle = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.024, 12, 32, Math.PI), mat.panel);
+  cHandle.position.y = 0.05;
+  cHandle.castShadow = true;
+  tubeHead.add(cHandle);
+  // 藍灰控制圓鈕兩排(示範圖特徵)
+  const btnMat = new THREE.MeshLambertMaterial({ color: 0x8fa3c8 });
+  for (const sx of [-0.085, 0.085]) {
+    for (const i of [-1, 0, 1]) {
+      const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.014, 14), btnMat);
+      btn.position.set(sx, 0.105, i * 0.052);
+      tubeHead.add(btn);
     }
   }
 }
@@ -298,9 +309,9 @@ function resetPose() { for (const p of JOINT_PATHS) setJoint(p, 0); }
 /* ---------- Presets(資料驅動) ---------- */
 const PRESETS = {
   "cspine-lateral": {
-    fig: { x: -0.9, z: -1.52, y: 0, rotY: 90 },
+    fig: { x: -0.9, z: -1.40, y: 0, rotY: 90 },
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
-    tube: { x: -0.9, z: 0.02, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
+    tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
