@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X光擺位 3D 模擬器</title>
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; font-family:"Segoe UI","Microsoft JhengHei",sans-serif; }
+  canvas { display:block; }
+
+  #panel {
+    position:fixed; top:0; right:0; width:330px; max-height:100vh; overflow-y:auto;
+    background:rgba(24,28,36,.92); color:#e6e9ef; font-size:13px;
+    padding:10px 12px 24px; box-sizing:border-box; z-index:10;
+  }
+  #panel h1 { font-size:15px; margin:2px 0 8px; color:#7fd1ff; }
+  #panel .hint { color:#9aa3b2; font-size:11px; margin:4px 0 8px; line-height:1.5; }
+  select, button {
+    background:#2b3242; color:#e6e9ef; border:1px solid #495066; border-radius:6px;
+    padding:5px 8px; font-size:13px; cursor:pointer;
+  }
+  select { width:100%; margin-bottom:6px; }
+  button:hover { background:#3a4358; }
+  .btnrow { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 10px; }
+  .btnrow button { flex:1 1 auto; }
+  details { border:1px solid #353c4e; border-radius:8px; margin:6px 0; padding:2px 8px 6px; }
+  details summary { cursor:pointer; font-weight:600; padding:5px 0; color:#cdd6e4; user-select:none; }
+  .row { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .row label { flex:0 0 96px; color:#aeb6c6; font-size:12px; white-space:nowrap; overflow:hidden; }
+  .row input[type=range] { flex:1; min-width:0; accent-color:#4ea1ff; }
+  .row .val { flex:0 0 44px; text-align:right; color:#7fd1ff; font-variant-numeric:tabular-nums; font-size:12px; }
+  #readout {
+    background:#1b2330; border:1px solid #2e3a52; border-radius:8px;
+    padding:8px 10px; margin:8px 0; line-height:1.7; font-size:12.5px;
+  }
+  #readout b { color:#ffd479; font-variant-numeric:tabular-nums; }
+  #toast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:rgba(20,24,32,.95); color:#cfe6ff; padding:8px 16px; border-radius:8px;
+    font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:20;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "mannequin": "https://cdn.jsdelivr.net/npm/mannequin-js@5/src/mannequin.js"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="panel">
+  <h1>X光擺位 3D 模擬器</h1>
+  <div class="hint">滑鼠左鍵旋轉視角 / 右鍵平移 / 滾輪縮放。先選場景預設,再微調關節與球管。</div>
+
+  <select id="presetSel"></select>
+  <div class="btnrow">
+    <button id="btnShot">📷 截圖 PNG</button>
+    <button id="btnBg">⬜ 白底切換</button>
+  </div>
+  <div class="btnrow">
+    <button id="btnExport">⬇ 匯出設定</button>
+    <button id="btnImport">⬆ 匯入設定</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+  </div>
+
+  <div id="readout"></div>
+
+  <div id="groups"></div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import * as THREE from "three";
+import { createStage, getStage, getGroundLevel, Female } from "mannequin";
+
+/* ============================================================
+   Stage 與單位
+   mannequin.js 自帶 stage(scene/camera/renderer/controls)
+   先建 stage -> 建 figure -> 量身高推回「世界單位 / 公尺」比例
+   ============================================================ */
+createStage();
+const stage = getStage();
+const scene = stage.scene, camera = stage.camera, renderer = stage.renderer, controls = stage.controls;
+if (stage.ground) stage.ground.visible = false;
+
+// 某些環境(嵌入式 preview)初始化時視窗尺寸為 0,強制按目前視窗重設
+function fitViewport() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+}
+fitViewport();
+setTimeout(fitViewport, 300);
+
+const FIG_HEIGHT_M = 1.65;
+const figure = new Female(FIG_HEIGHT_M);
+
+// 量 bbox 推單位比例:M = 世界單位 / 公尺
+const bbox = new THREE.Box3().setFromObject(figure);
+const figUnits = bbox.max.y - bbox.min.y;
+const M = figUnits / FIG_HEIGHT_M;
+const GL = getGroundLevel();
+const mm = m => m * M;                 // 公尺 -> 世界單位
+console.log("[sim] figure height units =", figUnits.toFixed(3), " M =", M.toFixed(3), " GL =", GL);
+
+const FIG_BASE_Y = figure.position.y;  // 站立時的預設 y(供臥/坐姿偏移)
+
+/* ============================================================
+   材質
+   ============================================================ */
+const mat = {
+  floor:  new THREE.MeshLambertMaterial({ color: 0xb9c0c8 }),
+  wall:   new THREE.MeshLambertMaterial({ color: 0xcfd6dd }),
+  metal:  new THREE.MeshLambertMaterial({ color: 0x8d96a3 }),
+  dark:   new THREE.MeshLambertMaterial({ color: 0x4a505c }),
+  panel:  new THREE.MeshLambertMaterial({ color: 0xe8ecf0 }),
+  active: new THREE.MeshLambertMaterial({ color: 0xf7fafc }),
+  table:  new THREE.MeshLambertMaterial({ color: 0xdde3e9 }),
+  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }),
+  laser:  new THREE.MeshBasicMaterial({ color: 0xff2a2a }),
+  cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
+};
+
+function box(w, h, d, m, x, y, z, parent) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(mm(w), mm(h), mm(d)), m);
+  mesh.position.set(mm(x), GL + mm(y), mm(z));
+  mesh.castShadow = mesh.receiveShadow = true;
+  (parent || scene).add(mesh);
+  return mesh;
+}
+
+/* ============================================================
+   攝影室(地板 + 兩面牆)
+   座標:後牆 z = -1.9,左牆 x = -2.2,地面 y = GL
+   ============================================================ */
+const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
+{
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(mm(ROOM.w), mm(ROOM.d)), mat.floor);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(mm(ROOM.leftX + ROOM.w / 2), GL + mm(0.001), mm(ROOM.backZ + ROOM.d / 2));
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(mm(ROOM.w), mm(ROOM.h)), mat.wall);
+  back.position.set(mm(ROOM.leftX + ROOM.w / 2), GL + mm(ROOM.h / 2), mm(ROOM.backZ));
+  back.receiveShadow = true;
+  scene.add(back);
+
+  const left = new THREE.Mesh(new THREE.PlaneGeometry(mm(ROOM.d), mm(ROOM.h)), mat.wall);
+  left.rotation.y = Math.PI / 2;
+  left.position.set(mm(ROOM.leftX), GL + mm(ROOM.h / 2), mm(ROOM.backZ + ROOM.d / 2));
+  left.receiveShadow = true;
+  scene.add(left);
+}
+
+/* ============================================================
+   立式攝影架(wall stand)- 後牆,板高可調
+   ============================================================ */
+const WS = { x: -0.9, faceZ: ROOM.backZ + 0.12 };  // 板面 z
+const wallStand = new THREE.Group();
+scene.add(wallStand);
+{
+  box(0.06, 2.3, 0.06, mat.metal, WS.x - 0.30, 1.15, ROOM.backZ + 0.05, wallStand);
+  box(0.06, 2.3, 0.06, mat.metal, WS.x + 0.30, 1.15, ROOM.backZ + 0.05, wallStand);
+}
+const wsCarriage = new THREE.Group();
+wallStand.add(wsCarriage);
+{
+  box(0.56, 0.60, 0.07, mat.panel, WS.x, 1.45, ROOM.backZ + 0.085, wsCarriage);   // 外殼(板心建在 1.45m,applyEquip 用差值平移)
+  const act = box(0.35, 0.43, 0.012, mat.active, WS.x, 1.45, WS.faceZ, wsCarriage); // 受像面 35x43
+  act.receiveShadow = true;
+}
+// 定位雷射橫線(沿牆,跟球管同高)
+const laser = box(1.5, 0.004, 0.004, mat.laser, WS.x, 1.4, WS.faceZ + 0.005, scene);
+laser.castShadow = false;
+
+/* ============================================================
+   攝影檯 + 檯面偵檢板(可移動)
+   ============================================================ */
+const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
+{
+  box(1.4, TBL.topY - 0.05, 0.62, mat.metal, TBL.cx, (TBL.topY - 0.05) / 2, TBL.cz);   // 底座
+  box(TBL.w, 0.06, TBL.d, mat.table, TBL.cx, TBL.topY - 0.03, TBL.cz);                  // 檯面
+}
+const tblDet = new THREE.Group();
+scene.add(tblDet);
+{
+  box(0.46, 0.015, 0.38, mat.dark, 0, TBL.topY + 0.008, 0, tblDet);
+  const a = box(0.43, 0.004, 0.35, mat.active, 0, TBL.topY + 0.018, 0, tblDet);
+  a.receiveShadow = true;
+}
+
+/* ============================================================
+   X 光球管(天吊式):rig(x,z + yaw)-> head(高度 + pitch)
+   beam 沿 head 局部 -Y;pitch=0 朝下,pitch=90 朝後牆(-Z)
+   ============================================================ */
+const tubeRig = new THREE.Group();
+scene.add(tubeRig);
+
+const column = new THREE.Mesh(new THREE.CylinderGeometry(mm(0.045), mm(0.045), 1, 16), mat.metal);
+column.castShadow = true;
+tubeRig.add(column);
+
+const tubeHead = new THREE.Group();
+tubeRig.add(tubeHead);
+{
+  const housing = new THREE.Mesh(new THREE.CylinderGeometry(mm(0.11), mm(0.11), mm(0.42), 20), mat.panel);
+  housing.rotation.z = Math.PI / 2;
+  housing.castShadow = true;
+  tubeHead.add(housing);
+  const colli = new THREE.Mesh(new THREE.BoxGeometry(mm(0.17), mm(0.15), mm(0.17)), mat.dark);
+  colli.position.y = -mm(0.16);
+  colli.castShadow = true;
+  tubeHead.add(colli);
+}
+
+// 光照野:半透明錐 + 十字 + spotlight(都掛在 tubeHead,local -Y 方向)
+const beamGroup = new THREE.Group();
+beamGroup.position.y = -mm(0.24);
+tubeHead.add(beamGroup);
+
+const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
+beamMesh.castShadow = false;
+beamGroup.add(beamMesh);
+const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
+beamGroup.add(crossLines);
+
+const spot = new THREE.SpotLight(0xfff0c8, 60, 0, 0.3, 0.35, 1.2);
+spot.castShadow = true;
+spot.shadow.mapSize.set(1024, 1024);
+beamGroup.add(spot);
+const spotTarget = new THREE.Object3D();
+beamGroup.add(spotTarget);
+spot.target = spotTarget;
+
+function rebuildBeam(fieldW, fieldH, len) {
+  const a = mm(0.02), W = mm(fieldW) / 2, H = mm(fieldH) / 2, L = mm(len);
+  // 8 頂點:近端孔徑(y=0)-> 遠端光野(y=-L)
+  const v = [
+    [-a, 0, -a], [a, 0, -a], [a, 0, a], [-a, 0, a],
+    [-W, -L, -H], [W, -L, -H], [W, -L, H], [-W, -L, H]
+  ];
+  const idx = [0,4,5, 0,5,1,  1,5,6, 1,6,2,  2,6,7, 2,7,3,  3,7,4, 3,4,0,  4,6,5, 4,7,6];
+  const pos = new Float32Array(idx.length * 3);
+  idx.forEach((vi, i) => { pos[i*3] = v[vi][0]; pos[i*3+1] = v[vi][1]; pos[i*3+2] = v[vi][2]; });
+  beamMesh.geometry.dispose();
+  beamMesh.geometry = new THREE.BufferGeometry();
+  beamMesh.geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+
+  const y = -L + mm(0.01);
+  const cp = new Float32Array([ -W, y, 0,  W, y, 0,   0, y, -H,  0, y, H ]);
+  crossLines.geometry.dispose();
+  crossLines.geometry = new THREE.BufferGeometry();
+  crossLines.geometry.setAttribute("position", new THREE.BufferAttribute(cp, 3));
+
+  spot.angle = Math.min(1.2, Math.atan(Math.max(W, H) / L) * 1.15 + 0.02);
+  spotTarget.position.set(0, -L, 0);
+}
+
+/* ============================================================
+   狀態 + 控制定義
+   ============================================================ */
+const S = {
+  fig:  { x: -0.9, z: -1.5, y: 0, turn: 90, bend: 0, tilt: 0 },
+  tube: { x: -0.9, z: 0.3, h: 1.45, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
+  ws:   { h: 1.45 },
+  det:  { x: 1.35, z: 0.55, on: 0 }
+};
+
+// 關節滑桿定義:[路徑, 標籤, min, max]
+const JOINT_DEFS = {
+  "頭頸": [
+    ["head.nod", "點頭(+低頭)", -60, 60], ["head.turn", "轉頭", -90, 90], ["head.tilt", "側傾", -60, 60]
+  ],
+  "軀幹": [
+    ["torso.bend", "前彎", -30, 100], ["torso.turn", "旋轉", -90, 90], ["torso.tilt", "側彎", -60, 60]
+  ],
+  "左手臂": [
+    ["l_arm.raise", "舉臂", -60, 200], ["l_arm.straddle", "外展", -40, 120], ["l_arm.turn", "旋轉", -90, 90],
+    ["l_elbow.bend", "屈肘", 0, 150], ["l_wrist.bend", "屈腕", -80, 80], ["l_wrist.turn", "腕旋", -90, 90]
+  ],
+  "右手臂": [
+    ["r_arm.raise", "舉臂", -60, 200], ["r_arm.straddle", "外展", -40, 120], ["r_arm.turn", "旋轉", -90, 90],
+    ["r_elbow.bend", "屈肘", 0, 150], ["r_wrist.bend", "屈腕", -80, 80], ["r_wrist.turn", "腕旋", -90, 90]
+  ],
+  "左腿": [
+    ["l_leg.raise", "抬腿", -30, 120], ["l_leg.straddle", "外展", -20, 80], ["l_leg.turn", "旋轉", -60, 60],
+    ["l_knee.bend", "屈膝", 0, 150], ["l_ankle.bend", "踝屈伸", -50, 50], ["l_ankle.turn", "踝旋", -45, 45], ["l_ankle.tilt", "踝內外翻", -40, 40]
+  ],
+  "右腿": [
+    ["r_leg.raise", "抬腿", -30, 120], ["r_leg.straddle", "外展", -20, 80], ["r_leg.turn", "旋轉", -60, 60],
+    ["r_knee.bend", "屈膝", 0, 150], ["r_ankle.bend", "踝屈伸", -50, 50], ["r_ankle.turn", "踝旋", -45, 45], ["r_ankle.tilt", "踝內外翻", -40, 40]
+  ]
+};
+
+function getJoint(path) {
+  const [part, prop] = path.split(".");
+  return figure[part][prop];
+}
+function setJoint(path, v) {
+  const [part, prop] = path.split(".");
+  figure[part][prop] = v;
+}
+
+// 記住預設姿勢(reset 用)
+const DEFAULT_JOINTS = {};
+for (const g of Object.values(JOINT_DEFS)) for (const [p] of g) DEFAULT_JOINTS[p] = getJoint(p);
+
+/* ============================================================
+   套用狀態到場景
+   ============================================================ */
+function applyFig() {
+  figure.position.x = mm(S.fig.x);
+  figure.position.z = mm(S.fig.z);
+  figure.position.y = FIG_BASE_Y + mm(S.fig.y);
+  figure.turn = S.fig.turn;
+  figure.bend = S.fig.bend;
+  figure.tilt = S.fig.tilt;
+}
+
+function applyEquip() {
+  // wall stand 板高
+  wsCarriage.position.y = mm(S.ws.h - 1.45);   // 建模時板心在 1.45m -> 此處用差值平移
+  // 檯面偵檢板
+  tblDet.visible = !!S.det.on;
+  tblDet.position.x = mm(S.det.x - 0);
+  tblDet.position.z = mm(S.det.z - 0);
+  // 球管
+  tubeRig.position.x = mm(S.tube.x);
+  tubeRig.position.z = mm(S.tube.z);
+  tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
+  tubeHead.position.y = GL + mm(S.tube.h);
+  tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);
+  const colLen = mm(ROOM.h - 0.1 - S.tube.h);
+  column.scale.y = colLen;
+  column.position.y = GL + mm(S.tube.h) + colLen / 2;
+  // 雷射線同步球管高度(貼牆)
+  laser.position.y = GL + mm(S.tube.h);
+
+  // SID 從焦點(tubeHead 中心)起算;光束視覺長度從準直儀出口(beamGroup)起算
+  const focal = new THREE.Vector3();
+  tubeHead.getWorldPosition(focal);
+  const q = new THREE.Quaternion();
+  beamGroup.getWorldQuaternion(q);
+  const dir = new THREE.Vector3(0, -1, 0).applyQuaternion(q);
+
+  let L = 1.2, sidTxt = "-";
+  const cands = [];
+  if (Math.abs(dir.z) > 0.05) {
+    const t = (mm(WS.faceZ) - focal.z) / dir.z;
+    if (t > mm(0.3)) cands.push({ t, what: "壁架板" });
+  }
+  if (Math.abs(dir.y) > 0.05) {
+    const planeY = GL + mm(S.det.on ? TBL.topY + 0.02 : TBL.topY);
+    const t = (planeY - focal.y) / dir.y;
+    if (t > mm(0.3)) cands.push({ t, what: S.det.on ? "檯面偵檢板" : "檯面" });
+  }
+  if (cands.length) {
+    const hit = cands.reduce((a, b) => (a.t < b.t ? a : b));
+    const sid = hit.t / M;
+    L = Math.max(0.1, sid - 0.24);            // 視覺光束從準直儀出口開始
+    sidTxt = `${Math.round(sid * 100)} cm(至${hit.what})`;
+  }
+  beamGroup.visible = !!S.tube.beamOn;
+  if (S.tube.beamOn) rebuildBeam(S.tube.fieldW, S.tube.fieldH, L);
+
+  document.getElementById("readout").innerHTML =
+    `SID:<b>${sidTxt}</b><br>` +
+    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,俯仰 <b>${S.tube.pitch}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
+    `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
+}
+
+function applyAll() { applyFig(); applyEquip(); }
+
+/* ============================================================
+   場景預設
+   ============================================================ */
+const PRESETS = {
+  "cspine-lateral": {
+    label: "頸椎側位 C-Spine Lateral(立位)",
+    fig: { x: -0.9, z: -1.52, y: 0, turn: 0, bend: 0, tilt: 0 },
+    joints: { "head.nod": -12 },
+    tube: { x: -0.9, z: 0.02, h: 1.42, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
+    ws: { h: 1.42 },
+    det: { x: 1.35, z: 0.55, on: 0 },
+    cam: { px: 1.4, py: 1.75, pz: 1.5, tx: -0.75, ty: 1.35, tz: -1.3 }
+  },
+  "ankle-ap": {
+    label: "踝關節前後位 Ankle AP(檯上坐姿)",
+    fig: { x: 0.52, z: 0.55, y: -0.03, turn: 0, bend: 0, tilt: 0 },
+    joints: {
+      "l_leg.raise": 90, "r_leg.raise": 90,
+      "l_knee.bend": 0, "r_knee.bend": 0,
+      "r_ankle.bend": 10, "l_ankle.bend": 10,
+      "torso.bend": -5,
+      "l_arm.raise": -30, "r_arm.raise": -30,
+      "l_elbow.bend": 10, "r_elbow.bend": 10
+    },
+    tube: { x: 1.32, z: 0.55, h: 1.75, pitch: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24, beamOn: 1 },
+    ws: { h: 1.45 },
+    det: { x: 1.32, z: 0.55, on: 1 },
+    cam: { px: 2.4, py: 1.6, pz: 2.2, tx: 0.9, ty: 0.85, tz: 0.5 }
+  }
+};
+
+function applyPreset(key) {
+  const p = PRESETS[key];
+  if (!p) return;
+  Object.assign(S.fig, p.fig);
+  Object.assign(S.tube, p.tube);
+  Object.assign(S.ws, p.ws);
+  Object.assign(S.det, p.det);
+  for (const [path, dv] of Object.entries(DEFAULT_JOINTS)) setJoint(path, dv);
+  for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
+  applyAll();
+  syncSliders();
+  if (p.cam) {
+    camera.position.set(mm(p.cam.px), GL + mm(p.cam.py), mm(p.cam.pz));
+    controls.target.set(mm(p.cam.tx), GL + mm(p.cam.ty), mm(p.cam.tz));
+    controls.update();
+  }
+}
+
+/* ============================================================
+   UI 建構
+   ============================================================ */
+const groupsDiv = document.getElementById("groups");
+const sliderRegistry = [];   // {get, input, valSpan}
+
+function addSlider(parent, label, min, max, step, get, set) {
+  const row = document.createElement("div");
+  row.className = "row";
+  const lab = document.createElement("label");
+  lab.textContent = label;
+  lab.title = label;
+  const input = document.createElement("input");
+  input.type = "range"; input.min = min; input.max = max; input.step = step;
+  input.value = get();
+  const val = document.createElement("span");
+  val.className = "val"; val.textContent = (+get()).toFixed(step < 1 ? 2 : 0);
+  input.addEventListener("input", () => {
+    const v = +input.value;
+    set(v);
+    val.textContent = v.toFixed(step < 1 ? 2 : 0);
+    applyAll();
+  });
+  row.append(lab, input, val);
+  parent.appendChild(row);
+  sliderRegistry.push({ get, input, val, step });
+}
+
+function addGroup(title, open) {
+  const det = document.createElement("details");
+  if (open) det.open = true;
+  const sum = document.createElement("summary");
+  sum.textContent = title;
+  det.appendChild(sum);
+  groupsDiv.appendChild(det);
+  return det;
+}
+
+function syncSliders() {
+  for (const s of sliderRegistry) {
+    const v = +s.get();
+    s.input.value = v;
+    s.val.textContent = v.toFixed(s.step < 1 ? 2 : 0);
+  }
+}
+
+// --- 人物全身 ---
+{
+  const g = addGroup("人物位置與朝向", true);
+  addSlider(g, "位置 X (m)", -2.2, 2.4, 0.01, () => S.fig.x, v => S.fig.x = v);
+  addSlider(g, "位置 Z (m)", -1.9, 2.1, 0.01, () => S.fig.z, v => S.fig.z = v);
+  addSlider(g, "升降 Y (m)", -0.2, 1.2, 0.01, () => S.fig.y, v => S.fig.y = v);
+  addSlider(g, "整體轉向", -180, 180, 1, () => S.fig.turn, v => S.fig.turn = v);
+  addSlider(g, "整體前傾", -90, 90, 1, () => S.fig.bend, v => S.fig.bend = v);
+  addSlider(g, "整體側傾", -90, 90, 1, () => S.fig.tilt, v => S.fig.tilt = v);
+}
+
+// --- 關節群 ---
+for (const [title, defs] of Object.entries(JOINT_DEFS)) {
+  const g = addGroup(title, title === "頭頸");
+  for (const [path, label, mn, mx] of defs) {
+    addSlider(g, label, mn, mx, 1, () => getJoint(path), v => setJoint(path, v));
+  }
+}
+
+// --- 球管 ---
+{
+  const g = addGroup("X 光球管", true);
+  addSlider(g, "位置 X (m)", -2.2, 2.4, 0.01, () => S.tube.x, v => S.tube.x = v);
+  addSlider(g, "位置 Z (m)", -1.8, 2.1, 0.01, () => S.tube.z, v => S.tube.z = v);
+  addSlider(g, "焦點高 (m)", 0.5, 2.2, 0.01, () => S.tube.h, v => S.tube.h = v);
+  addSlider(g, "俯仰角", -10, 120, 1, () => S.tube.pitch, v => S.tube.pitch = v);
+  addSlider(g, "水平旋轉", -180, 180, 1, () => S.tube.yaw, v => S.tube.yaw = v);
+  addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
+  addSlider(g, "光野高 (cm)", 5, 45, 1, () => S.tube.fieldH * 100, v => S.tube.fieldH = v / 100);
+  addSlider(g, "光野顯示", 0, 1, 1, () => S.tube.beamOn, v => S.tube.beamOn = v);
+}
+
+// --- 設備 ---
+{
+  const g = addGroup("壁架與偵檢板", true);
+  addSlider(g, "壁架板高 (m)", 0.4, 1.9, 0.01, () => S.ws.h, v => S.ws.h = v);
+  addSlider(g, "檯板顯示", 0, 1, 1, () => S.det.on, v => S.det.on = v);
+  addSlider(g, "檯板 X (m)", -0.4, 2.0, 0.01, () => S.det.x, v => S.det.x = v);
+  addSlider(g, "檯板 Z (m)", 0.1, 1.0, 0.01, () => S.det.z, v => S.det.z = v);
+}
+
+/* ============================================================
+   Preset 下拉 + 按鈕
+   ============================================================ */
+const presetSel = document.getElementById("presetSel");
+for (const [k, p] of Object.entries(PRESETS)) {
+  const opt = document.createElement("option");
+  opt.value = k; opt.textContent = p.label;
+  presetSel.appendChild(opt);
+}
+presetSel.addEventListener("change", () => applyPreset(presetSel.value));
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.opacity = 1;
+  setTimeout(() => t.style.opacity = 0, 1800);
+}
+
+document.getElementById("btnShot").addEventListener("click", () => {
+  renderer.render(scene, camera);
+  renderer.domElement.toBlob(b => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = `${presetSel.value}_3d.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  toast("已下載截圖");
+});
+
+let whiteBg = false;
+document.getElementById("btnBg").addEventListener("click", () => {
+  whiteBg = !whiteBg;
+  scene.background = new THREE.Color(whiteBg ? 0xffffff : 0xdcdcdc);
+});
+
+document.getElementById("btnExport").addEventListener("click", () => {
+  const joints = {};
+  for (const p of Object.keys(DEFAULT_JOINTS)) joints[p] = getJoint(p);
+  const data = { preset: presetSel.value, S, joints };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  a.download = `${presetSel.value}_settings.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已匯出設定 JSON");
+});
+
+document.getElementById("btnImport").addEventListener("click", () => document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  f.text().then(txt => {
+    try {
+      const data = JSON.parse(txt);
+      if (data.S) { Object.assign(S.fig, data.S.fig); Object.assign(S.tube, data.S.tube); Object.assign(S.ws, data.S.ws); Object.assign(S.det, data.S.det); }
+      if (data.joints) for (const [p, v] of Object.entries(data.joints)) setJoint(p, v);
+      applyAll(); syncSliders();
+      toast("已匯入設定");
+    } catch (err) { toast("匯入失敗:" + err.message); }
+  });
+  e.target.value = "";
+});
+
+/* ============================================================
+   啟動
+   ============================================================ */
+applyPreset("cspine-lateral");
+presetSel.value = "cspine-lateral";
+
+// debug 介面(console 調參用)
+window.__sim = { THREE, S, PRESETS, figure, scene, camera, renderer, controls, applyAll, applyPreset, syncSliders, getJoint, setJoint, mm, M, GL };
+</script>
+</body>
+</html>
