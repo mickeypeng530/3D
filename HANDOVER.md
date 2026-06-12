@@ -14,8 +14,10 @@
 - ✅ 截圖 PNG / 匯出匯入設定 JSON / 白底切換
 - ✅ 美術 pass:示範圖風格(灰肢體 + 藍衣人偶、粉紅雷射、灰藍場景、柔光)
 - ✅ 設備細節 pass:膠囊形球管殼 + 圓角準直儀 + 把手 + 接頭(yoke 掛 rig 不隨俯仰轉)、拱頂壁架殼(ExtrudeGeometry)、圓邊檯面(RoundedBoxGeometry)
-- ✅ **disfigure 平滑人偶實驗版 `disfigure.html`**(2026-06-12 spike 成功):無縫平滑身體 + **原生腳趾/手指**,MIT 授權,質感 = 使用者的 3D 擺位示範圖。兩個 preset(cspine-lateral 立位 / ankle-ap 仰臥)已驗證
-- ⏳ 待辦:決定是否把 index.html 全面遷移到 disfigure(建議:是,UI 滑桿照搬 + 關節路徑換名)、臥位左臂軸向怪癖解法、更多 preset(目標:主站 47 筆缺照 view)、男性 / 兒童人偶切換
+- ✅ **disfigure 平滑人偶實驗版 `disfigure.html`**(2026-06-12 spike 成功):無縫平滑身體 + **原生腳趾/手指**,MIT 授權,質感 = 使用者的 3D 擺位示範圖
+- ✅ **index.html 已全面遷移到 disfigure 引擎**(2026-06-13):完整滑桿 UI(54 個,含 disfigure 關節路徑 head/chest/waist/arm/elbow/wrist/leg/knee/ankle/foot 的 x/y/z)+ 雷射 gap/skin + 體表十字(含 flat 模式給仰臥)+ 手指 path 走 JSON 匯出入。男性人偶 Man(1.73)
+- ✅ **第一個缺照 view 模擬完成:pelvis-ap(骨盆前後位,仰臥)**——已 reviewed 缺照清單的第一筆。仰臥、雙臂體側、足內旋(ankle.z 近似)、CR 對骨盆中點、SID 102、光野 35x43
+- ⏳ 待辦:給使用者過目 pelvis-ap → 批次產「已 reviewed 缺照」其餘 9 筆 → 47 筆全補。臥位姿勢怪癖 workaround 已記錄(見下)
 
 ## 3. 架構速覽
 
@@ -46,6 +48,8 @@
 - **髖屈 55-90 度之間不穩**(模糊變形,腿會穿檯面或翹天)→ 檯上 view 優先用仰臥,不用長坐姿
 - **WebGPU SpotLight 陰影不生效**(three 0.184 + 此渲染路徑):「紅色光源+狹縫」做雷射投影行不通,遮光板擋不住光。定位雷射改用視覺等效法:牆線拆 L/R 兩段留身體陰影缺口 + per-preset 體表紅線段(`laser: {gapFrom, gapTo, skin}`)。準直儀十字遮光條的十字陰影同理可能無效(spot shadow),光野亮區是有的
 - **準直儀光野 spotlight 照在人偶身上要夠亮**:intensity 120+、penumbra 0.22,不然只看得到牆上的亮斑
+- 🔑 **THREE.SpotLight 預設 position=(0,1,0) 不是原點**:掛進 beamGroup 後光源比準直儀高 1m,光池變大變淡。一定要 `spot.position.set(0,0,0)`(2026-06-13 抓到,新舊兩版都中過)
+- **仰臥(rotZ=90)姿勢參數速查**(根旋轉軸語意翻轉的實測 workaround):右臂平貼=`r_arm.z:-78`、**左臂平貼=`l_arm.z:-115`**(不是 -78!);`leg.y` 仰臥下會把腿扭爆 → 足內旋改用 `ankle.z ∓12` 近似;檯上臥位 fig 參數模板 `{y:0.80, rotY:0, rotZ:90}`(頭朝 -x)
 
 ## 5. 接手者 cheatsheet
 

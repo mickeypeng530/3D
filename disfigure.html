@@ -236,6 +236,7 @@ beamGroup.add(beamMesh);
 const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
 beamGroup.add(crossLines);
 const spot = new THREE.SpotLight(0xfff0c8, 120, 0, 0.3, 0.22, 1.1);
+spot.position.set(0, 0, 0);   // SpotLight 預設 position=(0,1,0),不歸零會高 1m
 spot.castShadow = true;
 spot.shadow.mapSize.set(2048, 2048);
 spot.shadow.bias = -0.0005;

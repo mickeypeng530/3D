@@ -15,8 +15,9 @@
 ## 技術
 
 - 單檔 `index.html`,無 build step,CDN 載入
-- [three.js](https://threejs.org) 0.170 + [mannequin.js](https://github.com/boytchev/mannequin.js) 5.x(可擺姿勢人偶)
+- [three.js](https://threejs.org) 0.184(WebGPU,自動退 WebGL2)+ [disfigure](https://github.com/boytchev/disfigure)(平滑無縫人偶,含手指關節與原生腳趾)
 - 場景單位 = 公尺;SID 即時計算(焦點至偵檢板)
+- `disfigure.html` 為引擎實驗頁(歷史保留);舊 mannequin.js 版見 git 歷史
 
 ## 開發
 
