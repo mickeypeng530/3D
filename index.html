@@ -208,8 +208,7 @@ const mat = {
   panel:  beamLambert("#f2f4f6"),
   active: beamLambert("#fafcfe"),
   table:  beamLambert("#e6ebef"),
-  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false }),   // 單面+低不透明度:避免多層疊成白盤
-  cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
+  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false })   // 單面+低不透明度:避免多層疊成白盤
 };
 
 function box(w, h, d, m, x, y, z, parent) {
@@ -344,8 +343,6 @@ beamGroup.position.y = -0.27;
 tubeHead.add(beamGroup);
 const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
 beamGroup.add(beamMesh);
-const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
-beamGroup.add(crossLines);
 const spot = new THREE.SpotLight(0xfff0c8, 0, 0, 0.3, 0.22, 1.1);   // 預設關閉:光野視覺全由 beamPaint 矩形著色;要氛圍光用「光野亮度」滑桿
 spot.position.set(0, 0, 0);   // SpotLight 預設 position=(0,1,0),不歸零會高 1m(光池變大變淡)
 spot.castShadow = true;
@@ -368,11 +365,6 @@ function rebuildBeam(fieldW, fieldH, len) {
   beamMesh.geometry.dispose();
   beamMesh.geometry = new THREE.BufferGeometry();
   beamMesh.geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  const y = -L + 0.01;
-  const cp = new Float32Array([ -W, y, 0,  W, y, 0,   0, y, -H,  0, y, H ]);
-  crossLines.geometry.dispose();
-  crossLines.geometry = new THREE.BufferGeometry();
-  crossLines.geometry.setAttribute("position", new THREE.BufferAttribute(cp, 3));
   spot.angle = Math.min(1.2, Math.atan(Math.max(W, H) / L) * 1.15 + 0.02);
   spotTarget.position.set(0, -L, 0);
 }
