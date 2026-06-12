@@ -137,8 +137,14 @@ scene.add(wsCarriage);
   act.castShadow = false;
   act.receiveShadow = true;
 }
-const laser = box(1.5, 0.004, 0.004, mat.laser, WS.x, 1.4, WS.faceZ + 0.005, scene);
-laser.castShadow = false;
+// 定位雷射(視覺等效法,WebGPU spotlight 陰影不可用):
+// 牆/板上的水平線拆左右兩段,中間留「被身體擋住的陰影缺口」;
+// 另一小段貼著體表(臉頰等),per-preset 指定 — 看起來即雷射打在皮膚上
+const laserL = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005, scene);
+const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005, scene);
+const laserSkin = box(1, 0.005, 0.005, mat.laser, 0, 1.5, 0, scene);
+for (const m of [laserL, laserR, laserSkin]) m.castShadow = false;
+const LASER_X0 = ROOM.leftX + 0.01, LASER_X1 = 0.45;   // 牆線左右端點
 
 /* ---------- 攝影檯 + 檯面偵檢板 ---------- */
 const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
@@ -236,11 +242,6 @@ spot.target = spotTarget;
   }
 }
 
-// 體表雷射環(模擬定位雷射打在皮膚上,per-preset 指定位置與橢圓半徑)
-const laserRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.0035, 8, 64), mat.laser);
-laserRing.rotation.x = Math.PI / 2;
-laserRing.visible = false;
-scene.add(laserRing);
 
 function rebuildBeam(fieldW, fieldH, len) {
   const a = 0.02, W = fieldW / 2, H = fieldH / 2, L = len;
@@ -268,7 +269,8 @@ const S = {
   fig:  { x: -0.9, z: -1.52, y: 0, rotY: 0 },
   tube: { x: -0.9, z: 0.02, h: 1.42, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
   ws:   { h: 1.42 },
-  det:  { x: 1.32, z: 0.55, on: 0 }
+  det:  { x: 1.32, z: 0.55, on: 0 },
+  laser: { gapFrom: 0, gapTo: 0, skin: null }   // gap = 牆線上被身體擋住的 x 區間
 };
 
 function applyAll() {
@@ -280,6 +282,26 @@ function applyAll() {
   wsCarriage.position.y = S.ws.h - 1.45;
   tblDet.visible = !!S.det.on;
   tblDet.position.set(S.det.x, 0, S.det.z);
+  // 定位雷射:高度 = 壁架板心;牆線左右兩段 + 體表段
+  {
+    const ly = GL + S.ws.h;
+    const gF = S.laser.gapFrom, gT = S.laser.gapTo;
+    const hasGap = gT > gF;
+    const lEnd = hasGap ? gF : LASER_X1;
+    laserL.scale.x = Math.max(0.001, lEnd - LASER_X0);
+    laserL.position.set((LASER_X0 + lEnd) / 2, ly, WS.faceZ + 0.005);
+    laserR.visible = hasGap;
+    if (hasGap) {
+      laserR.scale.x = Math.max(0.001, LASER_X1 - gT);
+      laserR.position.set((gT + LASER_X1) / 2, ly, WS.faceZ + 0.005);
+    }
+    const sk = S.laser.skin;
+    laserSkin.visible = !!sk;
+    if (sk) {
+      laserSkin.scale.x = sk.len;
+      laserSkin.position.set(sk.x, ly, sk.z);
+    }
+  }
   if (figure.update) figure.update();
 
   tubeRig.position.set(S.tube.x, 0, S.tube.z);
@@ -290,7 +312,6 @@ function applyAll() {
   const colLen = ROOM.h - 0.1 - S.tube.h;
   column.scale.y = colLen;
   column.position.y = GL + S.tube.h + colLen / 2;
-  laser.position.y = GL + S.tube.h;
 
   const focal = new THREE.Vector3();
   tubeHead.getWorldPosition(focal);
@@ -333,7 +354,7 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
     tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
-    ring: { x: -0.9, y: 1.50, z: -1.40, rx: 0.075, rz: 0.10 },   // 頸部雷射環
+    laser: { gapFrom: -1.03, gapTo: -0.77, skin: { x: -0.9, z: -1.305, len: 0.24 } },   // 缺口=頭擋住,skin=臉頰段
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
   "ankle-ap": {
@@ -356,15 +377,9 @@ function applyPreset(key) {
   Object.assign(S.tube, p.tube);
   Object.assign(S.ws, p.ws);
   Object.assign(S.det, p.det);
+  S.laser = p.laser ? { gapFrom: p.laser.gapFrom, gapTo: p.laser.gapTo, skin: p.laser.skin || null } : { gapFrom: 0, gapTo: 0, skin: null };
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
-  if (p.ring) {
-    laserRing.visible = true;
-    laserRing.position.set(p.ring.x, GL + p.ring.y, p.ring.z);
-    laserRing.scale.set(p.ring.rx, p.ring.rz, 1);   // torus 已繞 X 轉 90 度,local y -> 世界 z
-  } else {
-    laserRing.visible = false;
-  }
   applyAll();
   camera.position.set(p.cam.px, GL + p.cam.py, p.cam.pz);
   controls.target.set(p.cam.tx, GL + p.cam.ty, p.cam.tz);
