@@ -88,7 +88,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { World, Man, scene, camera, renderer, controls, ground } from "disfigure";
+import { World, Man, scene, camera, renderer, controls, ground, light } from "disfigure";
 
 /* ============================================================
    World(disfigure 自帶 scene/camera/renderer/controls)
@@ -112,6 +112,32 @@ const figure = new Man(1.73);
 figure.frustumCulled = false;   // GPU 變形不更新 bounds
 
 /* ============================================================
+   「人不動,轉房間」架構:
+   disfigure 在人偶根部大旋轉時關節軸錯亂(臥位翻車),所以人偶永遠站立,
+   臥位 view 改成把整個房間(ROOMG)旋轉 90 度 + 攝影機 up 軸跟著轉,
+   圖面上人就「躺」在檯上,而關節保持站立語意 100% 正常。
+   LIE_M:room x->world -y(體軸沿檯)、room y->world +z(檯面法線=肚皮朝向)
+   ============================================================ */
+const ROOMG = new THREE.Group();
+scene.add(ROOMG);
+const LIE_M = new THREE.Matrix4().makeBasis(
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(-1, 0, 0)
+);
+
+// 房間內自帶主光(隨房間旋轉,讓臥位圖的光影方向仍然「從上方來」)
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(0, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
+sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
+ROOMG.add(sun);
+ROOMG.add(sun.target);
+if (light) light.intensity = 0.35;   // 壓低 disfigure 的世界座標主光
+
+/* ============================================================
    材質與幾何 helper
    ============================================================ */
 const mat = {
@@ -131,14 +157,14 @@ function box(w, h, d, m, x, y, z, parent) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
   mesh.position.set(x, GL + y, z);
   mesh.castShadow = mesh.receiveShadow = true;
-  (parent || scene).add(mesh);
+  (parent || ROOMG).add(mesh);
   return mesh;
 }
 function rbox(w, h, d, r, m, x, y, z, parent) {
   const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, r), m);
   mesh.position.set(x, GL + y, z);
   mesh.castShadow = mesh.receiveShadow = true;
-  (parent || scene).add(mesh);
+  (parent || ROOMG).add(mesh);
   return mesh;
 }
 
@@ -151,16 +177,16 @@ const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(ROOM.leftX + ROOM.w / 2, GL + 0.001, ROOM.backZ + ROOM.d / 2);
   floor.receiveShadow = true;
-  scene.add(floor);
+  ROOMG.add(floor);
   const back = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.h), mat.wall);
   back.position.set(ROOM.leftX + ROOM.w / 2, GL + ROOM.h / 2, ROOM.backZ);
   back.receiveShadow = true;
-  scene.add(back);
+  ROOMG.add(back);
   const left = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.d, ROOM.h), mat.wall);
   left.rotation.y = Math.PI / 2;
   left.position.set(ROOM.leftX, GL + ROOM.h / 2, ROOM.backZ + ROOM.d / 2);
   left.receiveShadow = true;
-  scene.add(left);
+  ROOMG.add(left);
 }
 
 /* ============================================================
@@ -168,11 +194,11 @@ const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
    ============================================================ */
 const WS = { x: -0.9, faceZ: ROOM.backZ + 0.24 };
 {
-  rbox(0.30, ROOM.h, 0.13, 0.02, mat.metal, WS.x, ROOM.h / 2, ROOM.backZ + 0.075, scene);
-  box(0.10, ROOM.h - 0.04, 0.012, mat.dark, WS.x, ROOM.h / 2, ROOM.backZ + 0.142, scene);
+  rbox(0.30, ROOM.h, 0.13, 0.02, mat.metal, WS.x, ROOM.h / 2, ROOM.backZ + 0.075);
+  box(0.10, ROOM.h - 0.04, 0.012, mat.dark, WS.x, ROOM.h / 2, ROOM.backZ + 0.142);
 }
 const wsCarriage = new THREE.Group();
-scene.add(wsCarriage);
+ROOMG.add(wsCarriage);
 {
   rbox(0.15, 0.24, 0.12, 0.02, mat.metal, WS.x, 1.45, ROOM.backZ + 0.165, wsCarriage);
   rbox(0.62, 0.66, 0.09, 0.03, mat.panel, WS.x, 1.45, ROOM.backZ + 0.19, wsCarriage);
@@ -186,15 +212,15 @@ scene.add(wsCarriage);
 /* ============================================================
    定位雷射 + 體表光野十字(視覺等效;WebGPU spot 陰影不可用)
    ============================================================ */
-const laserL = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005, scene);
-const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005, scene);
-const laserSkin = box(1, 0.005, 0.005, mat.laser, 0, 1.5, 0, scene);
+const laserL = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
+const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
+const laserSkin = box(1, 0.005, 0.005, mat.laser, 0, 1.5, 0);
 for (const m of [laserL, laserR, laserSkin]) m.castShadow = false;
 const LASER_X0 = ROOM.leftX + 0.01, LASER_X1 = 0.45;
 
 const crossSkinMat = new THREE.MeshBasicMaterial({ color: 0x6b4a1e, transparent: true, opacity: 0.55 });
-const crossSkinH = box(1, 0.006, 0.004, crossSkinMat, 0, 0, 0, scene);
-const crossSkinV = box(0.006, 1, 0.004, crossSkinMat, 0, 0, 0, scene);
+const crossSkinH = box(1, 0.006, 0.004, crossSkinMat, 0, 0, 0);
+const crossSkinV = box(0.006, 1, 0.004, crossSkinMat, 0, 0, 0);
 for (const m of [crossSkinH, crossSkinV]) { m.castShadow = false; m.visible = false; }
 
 /* ============================================================
@@ -204,7 +230,7 @@ const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
 rbox(1.35, TBL.topY - 0.10, 0.60, 0.02, mat.metal, TBL.cx, (TBL.topY - 0.10) / 2 + 0.01, TBL.cz);
 rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);
 const tblDet = new THREE.Group();
-scene.add(tblDet);
+ROOMG.add(tblDet);
 {
   rbox(0.46, 0.018, 0.38, 0.006, mat.dark, 0, TBL.topY + 0.009, 0, tblDet);
   const a = box(0.43, 0.004, 0.35, mat.active, 0, TBL.topY + 0.019, 0, tblDet);
@@ -215,7 +241,7 @@ scene.add(tblDet);
    球管(膠囊殼 + 圓角準直儀 + 把手 + C 形把手 + 控制鈕)
    ============================================================ */
 const tubeRig = new THREE.Group();
-scene.add(tubeRig);
+ROOMG.add(tubeRig);
 const column = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 16), mat.metal);
 column.castShadow = true;
 tubeRig.add(column);
@@ -274,7 +300,7 @@ const beamMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat.beam);
 beamGroup.add(beamMesh);
 const crossLines = new THREE.LineSegments(new THREE.BufferGeometry(), mat.cross);
 beamGroup.add(crossLines);
-const spot = new THREE.SpotLight(0xfff0c8, 120, 0, 0.3, 0.22, 1.1);
+const spot = new THREE.SpotLight(0xfff0c8, 55, 0, 0.3, 0.22, 1.1);
 spot.position.set(0, 0, 0);   // SpotLight 預設 position=(0,1,0),不歸零會高 1m(光池變大變淡)
 spot.castShadow = true;
 spot.shadow.mapSize.set(2048, 2048);
@@ -314,7 +340,8 @@ const S = {
   ws:   { h: 1.50 },
   det:  { x: 1.38, z: 0.55, on: 0 },
   laser: { gapFrom: 0, gapTo: 0, skin: null },
-  cross: null
+  cross: null,
+  room: { lie: 0, ox: 0, oy: 0, oz: 0 }   // lie=1 -> 房間旋轉(人偶保持站立=圖面上躺下)
 };
 
 /* ============================================================
@@ -374,7 +401,18 @@ function resetPose() { for (const p of ALL_PATHS) setJoint(p, 0); }
 function applyAll() {
   figure.position.set(S.fig.x, GL + S.fig.y, S.fig.z);
   // 旋轉必須下在 figure 本體(parent Group 會被變形 shader 忽略);大角度根旋轉會翻轉部分關節軸語意(HANDOVER)
+  // -> 臥位一律改用 S.room.lie 轉房間,figure 的 rotZ 僅留微調用
   figure.rotation.set(0, THREE.MathUtils.degToRad(S.fig.rotY), THREE.MathUtils.degToRad(S.fig.rotZ || 0));
+
+  // 房間姿態
+  if (S.room.lie) {
+    ROOMG.quaternion.setFromRotationMatrix(LIE_M);
+    ROOMG.position.set(S.room.ox, S.room.oy, S.room.oz);
+  } else {
+    ROOMG.quaternion.identity();
+    ROOMG.position.set(0, 0, 0);
+  }
+  ROOMG.updateMatrixWorld(true);
 
   wsCarriage.position.y = S.ws.h - 1.45;
   tblDet.visible = !!S.det.on;
@@ -389,12 +427,11 @@ function applyAll() {
   column.scale.y = colLen;
   column.position.y = GL + S.tube.h + colLen / 2;
 
-  // SID:焦點(tubeHead)至壁架板 / 檯面偵檢板 / 檯面
-  const focal = new THREE.Vector3();
-  tubeHead.getWorldPosition(focal);
-  const q = new THREE.Quaternion();
-  beamGroup.getWorldQuaternion(q);
-  const dir = new THREE.Vector3(0, -1, 0).applyQuaternion(q);
+  // SID:焦點至壁架板 / 檯面偵檢板 / 檯面 — 全部在「房間座標」解析計算
+  // (房間可能整體旋轉,設備相對幾何不變,用 S 的數值算最穩)
+  const eul = new THREE.Euler(THREE.MathUtils.degToRad(S.tube.pitch), THREE.MathUtils.degToRad(S.tube.yaw), 0, "YXZ");
+  const dir = new THREE.Vector3(0, -1, 0).applyEuler(eul);
+  const focal = new THREE.Vector3(S.tube.x, GL + S.tube.h, S.tube.z);
   let L = 1.2, sidTxt = "-";
   const cands = [];
   if (Math.abs(dir.z) > 0.05) {
@@ -472,28 +509,27 @@ const PRESETS = {
   },
   "pelvis-ap": {
     label: "骨盆前後位 Pelvis AP(仰臥)",
-    // 仰臥:rotZ=90 放倒,頭朝 -x;腳內旋 15 度(代償股骨前傾);CR 對 ASIS 與恥骨聯合中點
-    fig: { x: 1.42, z: 0.55, y: 0.80, rotY: 0, rotZ: 90 },
+    // 「轉房間」臥位:人偶站立(關節語意正常),room.lie 讓圖面上變仰臥
+    // 腳內旋 12 度(代償股骨前傾);CR 對 ASIS 與恥骨聯合中點;檯內 bucky
+    fig: { x: 0, z: 0.87, y: 0, rotY: 0, rotZ: 0 },
     joints: {
-      // 仰臥(rotZ=90)下左臂軸語意翻轉:左臂要 -115 才平貼體側(右臂 -78)— HANDOVER 怪癖
-      // leg.y 在仰臥下會嚴重變形,足內旋改用 ankle.z 視覺近似
-      "l_arm.z": -115, "r_arm.z": -78,
-      "l_ankle.z": -12, "r_ankle.z": 12,
-      "l_ankle.x": -12, "r_ankle.x": -12
+      "l_arm.z": -72, "r_arm.z": -72,
+      "l_leg.y": 12, "r_leg.y": -12
     },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.55, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
-    ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },   // 檯內 bucky,檯面板隱藏
+    ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },
     laser: { gapFrom: 0, gapTo: 0, skin: null },
-    cross: { x: 0.55, y: 0.97, z: 0.55, lenH: 0.20, lenV: 0.20, flat: true },
+    cross: { x: 0.55, y: 0.99, z: 0.55, lenH: 0.20, lenV: 0.20, flat: true },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "ankle-ap": {
     label: "踝關節前後位 Ankle AP(仰臥)",
-    fig: { x: 1.38, z: 0.55, y: 0.80, rotY: 0, rotZ: 90 },
+    fig: { x: 0, z: 0.87, y: 0, rotY: 0, rotZ: 0 },
     joints: {
-      "l_arm.z": -75, "r_arm.z": -75,
-      "l_ankle.x": -15, "r_ankle.x": -15
+      "l_arm.z": -72, "r_arm.z": -72
     },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 1.38, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 1 },
     laser: { gapFrom: 0, gapTo: 0, skin: null },
@@ -511,13 +547,21 @@ function applyPreset(key) {
   Object.assign(S.det, p.det);
   S.laser = p.laser ? JSON.parse(JSON.stringify(p.laser)) : { gapFrom: 0, gapTo: 0, skin: null };
   S.cross = p.cross ? JSON.parse(JSON.stringify(p.cross)) : null;
+  S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
   applyAll();
   syncSliders();
   if (p.cam) {
-    camera.position.set(p.cam.px, GL + p.cam.py, p.cam.pz);
-    controls.target.set(p.cam.tx, GL + p.cam.ty, p.cam.tz);
+    // 相機 preset 一律用「房間座標」描述,轉成世界座標;臥位時 up 軸跟著房間轉
+    const cp = new THREE.Vector3(p.cam.px, GL + p.cam.py, p.cam.pz);
+    const ct = new THREE.Vector3(p.cam.tx, GL + p.cam.ty, p.cam.tz);
+    ROOMG.updateMatrixWorld(true);
+    ROOMG.localToWorld(cp);
+    ROOMG.localToWorld(ct);
+    camera.up.set(0, S.room.lie ? 0 : 1, S.room.lie ? 1 : 0);
+    camera.position.copy(cp);
+    controls.target.copy(ct);
     controls.update();
   }
 }

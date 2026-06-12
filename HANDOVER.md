@@ -49,7 +49,16 @@
 - **WebGPU SpotLight 陰影不生效**(three 0.184 + 此渲染路徑):「紅色光源+狹縫」做雷射投影行不通,遮光板擋不住光。定位雷射改用視覺等效法:牆線拆 L/R 兩段留身體陰影缺口 + per-preset 體表紅線段(`laser: {gapFrom, gapTo, skin}`)。準直儀十字遮光條的十字陰影同理可能無效(spot shadow),光野亮區是有的
 - **準直儀光野 spotlight 照在人偶身上要夠亮**:intensity 120+、penumbra 0.22,不然只看得到牆上的亮斑
 - 🔑 **THREE.SpotLight 預設 position=(0,1,0) 不是原點**:掛進 beamGroup 後光源比準直儀高 1m,光池變大變淡。一定要 `spot.position.set(0,0,0)`(2026-06-13 抓到,新舊兩版都中過)
-- **仰臥(rotZ=90)姿勢參數速查**(根旋轉軸語意翻轉的實測 workaround):右臂平貼=`r_arm.z:-78`、**左臂平貼=`l_arm.z:-115`**(不是 -78!);`leg.y` 仰臥下會把腿扭爆 → 足內旋改用 `ankle.z ∓12` 近似;檯上臥位 fig 參數模板 `{y:0.80, rotY:0, rotZ:90}`(頭朝 -x)
+- ~~仰臥 rotZ=90 姿勢參數速查~~(**已棄用**,被「轉房間」架構取代,留作歷史:rotZ 旋轉人偶會讓左臂 -115 才平貼、leg.y 扭爆等;rotY+rotZ 組合會讓人偶整個散掉)
+- 🔑🔑 **臥位的正解:「人不動,轉房間」(2026-06-13 重構)**:人偶永遠站立(關節語意 100% 正常),臥位 view 設 `room: {lie:1, ox, oy, oz}` 讓 ROOMG(房間+設備+雷射全在裡面)旋轉 90 度 + 相機 up 軸跟轉 → 圖面上人躺在檯上
+  - LIE_M 基底:room x→world -y(體軸沿檯)、room y→world +z(檯面法線=肚皮朝向)、room z→world -x
+  - 座標換算:world_x = -z_room + ox / world_y = -x_room + oy / world_z = y_room + oz
+  - 模板:fig `{x:0, z:0.87, y:0, rotY:0}`(站立,背貼檯面),room `{lie:1, ox:0.55, oy:1.47, oz:0}` → 頭朝room -x、骨盆在 room x≈0.55、踝在 ≈1.38
+  - 相機 preset 一律寫房間座標,applyPreset 自動 localToWorld + up 軸切換
+  - SID 改在房間座標解析計算(S 的數值 + Euler YXZ),不依賴 world position
+  - 內建 sun(DirectionalLight)放在 ROOMG 內隨房間轉,disfigure 的世界光壓到 0.35 → 臥位圖光影方向仍自然
+  - 站立姿勢的足內旋 `leg.y ±12`、雙臂 `arm.z -72` 全部正常可用
+- **spotlight 光野強度:55**(120 在 SID 75cm 會過曝;修掉 SpotLight 預設位置 bug 後要重新校這個值)
 
 ## 5. 接手者 cheatsheet
 
