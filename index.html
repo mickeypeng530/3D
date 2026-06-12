@@ -123,8 +123,6 @@ figure.frustumCulled = false;   // GPU 變形不更新 bounds
 // 人偶表面著色(TSL colorNode):衣服 + 雷射線 + 光野十字「畫在皮膚上」
 // 任何視角都貼著身體輪廓(真正在表面),取代會浮空的貼片做法
 // ============================================================
-const uLaserY = uniform(1.5);          // 雷射水平面高度(世界座標,僅站立場景)
-const uLaserOn = uniform(0);
 const uBeamInv = uniform(new THREE.Matrix4());   // 世界 -> 光束局部(束軸 -Y)
 const uFieldW = uniform(0.24);
 const uFieldH = uniform(0.30);
@@ -161,10 +159,6 @@ function beamPaint(base) {
 
   // 光野 + 十字(畫在皮膚上)
   c = beamPaint(c);
-  // 定位雷射(水平面 + 面向雷射來向 +z 的表面)
-  const laserBand = step(abs(positionWorld.y.sub(uLaserY)), float(0.0042));
-  const facing = step(float(-0.1), normalWorld.z);
-  c = mix(c, color("#ff3055"), laserBand.mul(facing).mul(uLaserOn));
 
   figure.material.colorNode = c;
   figure.material.needsUpdate = true;
@@ -215,7 +209,6 @@ const mat = {
   active: beamLambert("#fafcfe"),
   table:  beamLambert("#e6ebef"),
   beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false }),   // 單面+低不透明度:避免多層疊成白盤
-  laser:  new THREE.MeshBasicMaterial({ color: 0xff3d6e }),
   cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
 };
 
@@ -274,14 +267,6 @@ ROOMG.add(wsCarriage);
   act.castShadow = false;
   act.receiveShadow = true;
 }
-
-/* ============================================================
-   定位雷射 + 體表光野十字(視覺等效;WebGPU spot 陰影不可用)
-   ============================================================ */
-const laserL = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
-const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
-for (const m of [laserL, laserR]) m.castShadow = false;
-const LASER_X0 = ROOM.leftX + 0.01, LASER_X1 = 0.45;
 
 
 /* ============================================================
@@ -400,7 +385,6 @@ const S = {
   tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
   ws:   { h: 1.50 },
   det:  { x: 1.38, z: 0.55, on: 0 },
-  laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },   // skinOn=1 -> 雷射畫上皮膚(shader)
   room: { lie: 0, ox: 0, oy: 0, oz: 0 }   // lie=1 -> 房間旋轉(人偶保持站立=圖面上躺下)
 };
 
@@ -512,23 +496,7 @@ function applyAll() {
   beamGroup.visible = !!S.tube.beamOn;
   if (S.tube.beamOn) rebuildBeam(S.tube.fieldW, S.tube.fieldH, L);
 
-  // 定位雷射(高度 = 壁架板心)
-  {
-    const ly = GL + S.ws.h;
-    const gF = S.laser.gapFrom, gT = S.laser.gapTo;
-    const hasGap = gT > gF;
-    const lEnd = hasGap ? gF : LASER_X1;
-    laserL.scale.x = Math.max(0.001, lEnd - LASER_X0);
-    laserL.position.set((LASER_X0 + lEnd) / 2, ly, WS.faceZ + 0.005);
-    laserR.visible = hasGap;
-    if (hasGap) {
-      laserR.scale.x = Math.max(0.001, LASER_X1 - gT);
-      laserR.position.set((gT + LASER_X1) / 2, ly, WS.faceZ + 0.005);
-    }
-  }
-  // 皮膚著色 uniform:雷射面 + 光束逆矩陣(十字/光野畫在體表,任何視角正確)
-  uLaserOn.value = (!S.room.lie && S.laser.skinOn) ? 1 : 0;
-  uLaserY.value = GL + S.ws.h;
+  // 表面著色 uniform:光束逆矩陣(十字/光野畫在表面,任何視角正確)
   uFieldW.value = S.tube.fieldW;
   uFieldH.value = S.tube.fieldH;
   uBeamLen.value = L;
@@ -554,7 +522,6 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
     tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
-    laser: { gapFrom: -1.03, gapTo: -0.77, skinOn: 1 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
   "pelvis-ap": {
@@ -569,7 +536,6 @@ const PRESETS = {
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.55, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },
-    laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "ankle-ap": {
@@ -581,7 +547,6 @@ const PRESETS = {
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 1.38, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 1 },
-    laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },
     cam: { px: 2.4, py: 1.6, pz: 2.2, tx: 0.9, ty: 0.85, tz: 0.5 }
   }
 };
@@ -593,7 +558,6 @@ function applyPreset(key) {
   Object.assign(S.tube, p.tube);
   Object.assign(S.ws, p.ws);
   Object.assign(S.det, p.det);
-  S.laser = p.laser ? { ...p.laser } : { gapFrom: 0, gapTo: 0, skinOn: 0 };
   S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
@@ -610,6 +574,8 @@ function applyPreset(key) {
     camera.position.copy(cp);
     controls.target.copy(ct);
     controls.update();
+    readCamAngles();
+    syncSliders();
   }
 }
 
@@ -664,6 +630,33 @@ function syncSliders() {
   addSlider(g, "主光", 0, 3, 0.05, () => sun.intensity, v => sun.intensity = v);
   addSlider(g, "環境光", 0, 1.5, 0.05, () => ambient.intensity, v => ambient.intensity = v);
   addSlider(g, "光野亮度", 0, 200, 1, () => spot.intensity, v => spot.intensity = v);
+}
+
+// 視角精準控制(以 controls.target 為中心的球面角,房間座標 -> 臥位場景也正確)
+const camS = { az: 35, el: 25, dist: 3 };
+function applyCamAngles() {
+  const azR = THREE.MathUtils.degToRad(camS.az), elR = THREE.MathUtils.degToRad(camS.el);
+  const v = new THREE.Vector3(
+    Math.sin(azR) * Math.cos(elR),
+    Math.sin(elR),
+    Math.cos(azR) * Math.cos(elR)
+  ).applyQuaternion(ROOMG.quaternion);
+  camera.position.copy(controls.target).addScaledVector(v, camS.dist);
+  camera.up.copy(roomDir(0, 1, 0));
+  controls.update();
+}
+function readCamAngles() {
+  const inv = ROOMG.quaternion.clone().invert();
+  const v = camera.position.clone().sub(controls.target).applyQuaternion(inv);
+  camS.dist = Math.max(0.3, v.length());
+  camS.el = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(v.y / camS.dist, -1, 1)));
+  camS.az = THREE.MathUtils.radToDeg(Math.atan2(v.x, v.z));
+}
+{
+  const g = addGroup("視角(可精準調)", true);
+  addSlider(g, "水平角", -180, 180, 1, () => camS.az, v => { camS.az = v; applyCamAngles(); });
+  addSlider(g, "垂直角", -10, 89, 1, () => camS.el, v => { camS.el = v; applyCamAngles(); });
+  addSlider(g, "距離 (m)", 0.6, 5, 0.05, () => camS.dist, v => { camS.dist = v; applyCamAngles(); });
 }
 
 {
@@ -732,9 +725,14 @@ function setView(kind) {
   // 正上方視角時 up 不能與視線平行,改用房間 -z 當畫面上方;其他視角用房間 +y
   camera.up.copy(kind === "top" ? roomDir(0, 0, -1) : roomDir(0, 1, 0));
   controls.update();
+  readCamAngles();
+  syncSliders();
 }
 document.querySelectorAll("#panel button[data-view]").forEach(b =>
   b.addEventListener("click", () => setView(b.dataset.view)));
+
+// 滑鼠手動旋轉後,讓視角滑桿同步當前角度
+controls.addEventListener("change", () => { readCamAngles(); syncSliders(); });
 
 function toast(msg) {
   const t = document.getElementById("toast");
@@ -787,7 +785,6 @@ document.getElementById("importFile").addEventListener("change", e => {
       if (data.S) {
         Object.assign(S.fig, data.S.fig); Object.assign(S.tube, data.S.tube);
         Object.assign(S.ws, data.S.ws); Object.assign(S.det, data.S.det);
-        if (data.S.laser) S.laser = data.S.laser;
         if (data.S.room) S.room = data.S.room;
       }
       if (data.joints) for (const [p, v] of Object.entries(data.joints)) setJoint(p, v);
