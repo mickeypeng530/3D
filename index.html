@@ -100,6 +100,15 @@ setTimeout(fitViewport, 300);
 const FIG_HEIGHT_M = 1.65;
 const figure = new Female(FIG_HEIGHT_M);
 
+// 示範圖風格:灰色肢體 + 藍色病人服(torso/pelvis 當衣服色)
+// recolor(head, shoes, pelvis, joints, limbs, torso, nails)
+figure.recolor("#a8adb5", "#6b7280", "#56759c", "#8d939c", "#a8adb5", "#5d7ea8", "#8d939c");
+
+// 柔光:壓低主光、補環境光
+if (stage.light) stage.light.intensity = 2.1;
+scene.traverse(o => { if (o.isAmbientLight) o.intensity = 0.75; });
+scene.background = new THREE.Color(0xc3ccd5);
+
 // 量 bbox 推單位比例:M = 世界單位 / 公尺
 const bbox = new THREE.Box3().setFromObject(figure);
 const figUnits = bbox.max.y - bbox.min.y;
@@ -114,15 +123,15 @@ const FIG_BASE_Y = figure.position.y;  // 站立時的預設 y(供臥/坐姿偏�
    材質
    ============================================================ */
 const mat = {
-  floor:  new THREE.MeshLambertMaterial({ color: 0xb9c0c8 }),
-  wall:   new THREE.MeshLambertMaterial({ color: 0xcfd6dd }),
-  metal:  new THREE.MeshLambertMaterial({ color: 0x8d96a3 }),
-  dark:   new THREE.MeshLambertMaterial({ color: 0x4a505c }),
-  panel:  new THREE.MeshLambertMaterial({ color: 0xe8ecf0 }),
-  active: new THREE.MeshLambertMaterial({ color: 0xf7fafc }),
-  table:  new THREE.MeshLambertMaterial({ color: 0xdde3e9 }),
-  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }),
-  laser:  new THREE.MeshBasicMaterial({ color: 0xff2a2a }),
+  floor:  new THREE.MeshLambertMaterial({ color: 0xa9b5bf }),
+  wall:   new THREE.MeshLambertMaterial({ color: 0xd4dbe1 }),
+  metal:  new THREE.MeshLambertMaterial({ color: 0x9ba5af }),
+  dark:   new THREE.MeshLambertMaterial({ color: 0x3f4854 }),
+  panel:  new THREE.MeshLambertMaterial({ color: 0xf2f4f6 }),
+  active: new THREE.MeshLambertMaterial({ color: 0xfafcfe }),
+  table:  new THREE.MeshLambertMaterial({ color: 0xe6ebef }),
+  beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.13, side: THREE.DoubleSide, depthWrite: false }),
+  laser:  new THREE.MeshBasicMaterial({ color: 0xff3d6e }),
   cross:  new THREE.LineBasicMaterial({ color: 0xff8800 })
 };
 
