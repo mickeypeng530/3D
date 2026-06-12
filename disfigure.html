@@ -58,6 +58,14 @@ import { World, Man, scene, camera, renderer, controls, ground } from "disfigure
 
 new World();
 if (ground) ground.visible = false;
+// 嵌入式 preview 初始化時視窗尺寸可能為 0,強制重設(同 index.html 的坑)
+function fitViewport() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+}
+fitViewport();
+setTimeout(fitViewport, 300);
 scene.background = new THREE.Color(0xc3ccd5);
 scene.add(new THREE.AmbientLight(0xffffff, 0.65));   // disfigure 預設無環境光,人偶背光面會全黑
 
@@ -145,6 +153,12 @@ const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005, scene
 const laserSkin = box(1, 0.005, 0.005, mat.laser, 0, 1.5, 0, scene);
 for (const m of [laserL, laserR, laserSkin]) m.castShadow = false;
 const LASER_X0 = ROOM.leftX + 0.01, LASER_X1 = 0.45;   // 牆線左右端點
+
+// 體表光野十字(準直儀十字影的視覺等效,per-preset 指定;WebGPU spot 陰影不可用)
+const crossSkinMat = new THREE.MeshBasicMaterial({ color: 0x6b4a1e, transparent: true, opacity: 0.55 });
+const crossSkinH = box(1, 0.006, 0.004, crossSkinMat, 0, 0, 0, scene);
+const crossSkinV = box(0.006, 1, 0.004, crossSkinMat, 0, 0, 0, scene);
+for (const m of [crossSkinH, crossSkinV]) { m.castShadow = false; m.visible = false; }
 
 /* ---------- 攝影檯 + 檯面偵檢板 ---------- */
 const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
@@ -270,7 +284,8 @@ const S = {
   tube: { x: -0.9, z: 0.02, h: 1.42, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
   ws:   { h: 1.42 },
   det:  { x: 1.32, z: 0.55, on: 0 },
-  laser: { gapFrom: 0, gapTo: 0, skin: null }   // gap = 牆線上被身體擋住的 x 區間
+  laser: { gapFrom: 0, gapTo: 0, skin: null },  // gap = 牆線上被身體擋住的 x 區間
+  cross: null                                    // 體表光野十字 {x, y, z, lenH, lenV}
 };
 
 function applyAll() {
@@ -300,6 +315,17 @@ function applyAll() {
     if (sk) {
       laserSkin.scale.x = sk.len;
       laserSkin.position.set(sk.x, ly, sk.z);
+    }
+  }
+  // 體表光野十字
+  {
+    const c = S.cross;
+    crossSkinH.visible = crossSkinV.visible = !!c;
+    if (c) {
+      crossSkinH.scale.x = c.lenH;
+      crossSkinH.position.set(c.x, GL + c.y, c.z);
+      crossSkinV.scale.y = c.lenV;
+      crossSkinV.position.set(c.x, GL + c.y, c.z);
     }
   }
   if (figure.update) figure.update();
@@ -354,7 +380,8 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
     tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
-    laser: { gapFrom: -1.03, gapTo: -0.77, skin: { x: -0.9, z: -1.305, len: 0.24 } },   // 缺口=頭擋住,skin=臉頰段
+    laser: { gapFrom: -1.03, gapTo: -0.77, skin: { x: -0.9, z: -1.325, len: 0.24 } },   // 缺口=頭擋住,skin=臉頰段
+    cross: { x: -0.9, y: 1.50, z: -1.323, lenH: 0.16, lenV: 0.12 },                      // 頸側的光野十字影(與雷射同高,物理上重合)
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
   "ankle-ap": {
@@ -378,6 +405,7 @@ function applyPreset(key) {
   Object.assign(S.ws, p.ws);
   Object.assign(S.det, p.det);
   S.laser = p.laser ? { gapFrom: p.laser.gapFrom, gapTo: p.laser.gapTo, skin: p.laser.skin || null } : { gapFrom: 0, gapTo: 0, skin: null };
+  S.cross = p.cross || null;
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
   applyAll();
