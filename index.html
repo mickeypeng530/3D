@@ -28,7 +28,12 @@
   .row { display:flex; align-items:center; gap:6px; margin:3px 0; }
   .row label { flex:0 0 96px; color:#aeb6c6; font-size:12px; white-space:nowrap; overflow:hidden; }
   .row input[type=range] { flex:1; min-width:0; accent-color:#4ea1ff; }
-  .row .val { flex:0 0 44px; text-align:right; color:#7fd1ff; font-variant-numeric:tabular-nums; font-size:12px; }
+  .row input.val {
+    flex:0 0 50px; width:50px; text-align:right; color:#7fd1ff; font-variant-numeric:tabular-nums;
+    font-size:12px; background:#1b2330; border:1px solid #2e3a52; border-radius:4px; padding:1px 4px;
+    -moz-appearance:textfield; appearance:textfield;
+  }
+  .row input.val::-webkit-outer-spin-button, .row input.val::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   #readout {
     background:#1b2330; border:1px solid #2e3a52; border-radius:8px;
     padding:8px 10px; margin:8px 0; line-height:1.7; font-size:12.5px;
@@ -594,12 +599,24 @@ function addSlider(parent, label, min, max, step, get, set) {
   const input = document.createElement("input");
   input.type = "range"; input.min = min; input.max = max; input.step = step;
   input.value = get();
-  const val = document.createElement("span");
-  val.className = "val"; val.textContent = (+get()).toFixed(step < 1 ? 2 : 0);
+  // 數值欄可直接鍵盤輸入(Enter 或失焦套用)
+  const val = document.createElement("input");
+  val.type = "number"; val.className = "val";
+  val.min = min; val.max = max; val.step = step;
+  val.value = (+get()).toFixed(step < 1 ? 2 : 0);
   input.addEventListener("input", () => {
     const v = +input.value;
     set(v);
-    val.textContent = v.toFixed(step < 1 ? 2 : 0);
+    val.value = v.toFixed(step < 1 ? 2 : 0);
+    applyAll();
+  });
+  val.addEventListener("change", () => {
+    let v = parseFloat(val.value);
+    if (isNaN(v)) v = get();
+    v = Math.min(max, Math.max(min, v));
+    set(v);
+    input.value = v;
+    val.value = v.toFixed(step < 1 ? 2 : 0);
     applyAll();
   });
   row.append(lab, input, val);
@@ -621,7 +638,7 @@ function syncSliders() {
   for (const s of sliderRegistry) {
     const v = +s.get();
     s.input.value = v;
-    s.val.textContent = v.toFixed(s.step < 1 ? 2 : 0);
+    if (document.activeElement !== s.val) s.val.value = v.toFixed(s.step < 1 ? 2 : 0);
   }
 }
 
