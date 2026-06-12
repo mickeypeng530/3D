@@ -524,14 +524,16 @@ const PRESETS = {
   "pelvis-ap": {
     label: "骨盆前後位 Pelvis AP(仰臥)",
     // 「轉房間」臥位:人偶站立(關節語意正常),room.lie 讓圖面上變仰臥
-    // 腳內旋 12 度(代償股骨前傾);CR 對 ASIS 與恥骨聯合中點;檯內 bucky
+    // 本院 SOP:雙腿略分開並內旋 15-20 度(股骨頸平行偵檢板);CR 垂直射入 ASIS 下方 5cm;SID 102
+    // 內旋 = l_thigh.y 負 / r_thigh.y 正(實測);ASIS 世界 y≈1.00 -> CR room x = 1.47-0.95 = 0.52
     fig: { x: 0, z: 0.87, y: 0, rotY: 0, rotZ: 0 },
     joints: {
       "l_arm.z": -72, "r_arm.z": -72,
-      "l_thigh.y": 15, "r_thigh.y": -15
+      "l_leg.z": 4, "r_leg.z": 4,
+      "l_thigh.y": -18, "r_thigh.y": 18
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: 0.55, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
+    tube: { x: 0.52, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
