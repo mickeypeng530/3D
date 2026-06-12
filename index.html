@@ -94,7 +94,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { positionGeometry, color, mix, step, float, abs } from "three/tsl";
+import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4 } from "three/tsl";
 import { World, Man, scene, camera, renderer, controls, ground, light } from "disfigure";
 
 /* ============================================================
@@ -119,14 +119,45 @@ const GL = 0;   // disfigure 原生公尺單位,地面 y=0
 const figure = new Man(1.73);
 figure.frustumCulled = false;   // GPU 變形不更新 bounds
 
-// 病人服(仿示範圖藍色連身):TSL 用「模型空間高度」切色帶,不影響變形
-// 模型空間 y 0~1.785;disfigure 的 dress() 在此版為 no-op,故自己做
+// ============================================================
+// 人偶表面著色(TSL colorNode):衣服 + 雷射線 + 光野十字「畫在皮膚上」
+// 任何視角都貼著身體輪廓(真正在表面),取代會浮空的貼片做法
+// ============================================================
+const uLaserY = uniform(1.5);          // 雷射水平面高度(世界座標,僅站立場景)
+const uLaserOn = uniform(0);
+const uBeamInv = uniform(new THREE.Matrix4());   // 世界 -> 光束局部(束軸 -Y)
+const uFieldW = uniform(0.24);
+const uFieldH = uniform(0.30);
+const uBeamLen = uniform(1.0);
+const uCrossOn = uniform(1);
 {
+  // 衣服:模型空間高度切色帶(y 0~1.785;dress() 在此版為 no-op)
   const y = positionGeometry.y, x = positionGeometry.x;
-  const shorts = step(float(0.68), y).mul(step(y, float(1.06)));                               // 短褲帶(全寬)
-  const top = step(float(1.06), y).mul(step(y, float(1.46))).mul(step(abs(x), float(0.23)));   // 背心帶(排除手臂)
-  const mask = shorts.add(top).min(1);
-  figure.material.colorNode = mix(color("#bfc4cb"), color("#54749e"), mask);
+  const shorts = step(float(0.68), y).mul(step(y, float(1.06)));
+  const top = step(float(1.06), y).mul(step(y, float(1.46))).mul(step(abs(x), float(0.23)));
+  const clothMask = shorts.add(top).min(1);
+  let c = mix(color("#bfc4cb"), color("#54749e"), clothMask);
+
+  // 光束局部座標(束軸 -Y,d = 沿束深度)
+  const posB = uBeamInv.mul(vec4(positionWorld, 1)).xyz;
+  const d = posB.y.negate();
+  const inRange = step(float(0.05), d).mul(step(d, uBeamLen.add(0.3)));
+  const halfW = uFieldW.mul(0.5).mul(d).div(uBeamLen);
+  const halfH = uFieldH.mul(0.5).mul(d).div(uBeamLen);
+  const inField = step(abs(posB.x), halfW).mul(step(abs(posB.z), halfH));
+  const fieldMask = inRange.mul(inField).mul(uCrossOn);
+
+  // 光野照亮(皮膚上的亮區)
+  c = c.add(color("#fff0c8").mul(fieldMask.mul(0.22)));
+  // 十字陰影線(沿光束中軸兩平面)
+  const crossLine = step(abs(posB.x), float(0.0035)).add(step(abs(posB.z), float(0.0035))).min(1);
+  c = mix(c, c.mul(0.45), fieldMask.mul(crossLine));
+  // 定位雷射(水平面 + 面向雷射來向 +z 的表面)
+  const laserBand = step(abs(positionWorld.y.sub(uLaserY)), float(0.0042));
+  const facing = step(float(-0.1), normalWorld.z);
+  c = mix(c, color("#ff3055"), laserBand.mul(facing).mul(uLaserOn));
+
+  figure.material.colorNode = c;
   figure.material.needsUpdate = true;
 }
 
@@ -233,14 +264,9 @@ ROOMG.add(wsCarriage);
    ============================================================ */
 const laserL = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
 const laserR = box(1, 0.0045, 0.0045, mat.laser, 0, 1.5, WS.faceZ + 0.005);
-const laserSkin = box(1, 0.005, 0.005, mat.laser, 0, 1.5, 0);
-for (const m of [laserL, laserR, laserSkin]) m.castShadow = false;
+for (const m of [laserL, laserR]) m.castShadow = false;
 const LASER_X0 = ROOM.leftX + 0.01, LASER_X1 = 0.45;
 
-const crossSkinMat = new THREE.MeshBasicMaterial({ color: 0x6b4a1e, transparent: true, opacity: 0.55 });
-const crossSkinH = box(1, 0.006, 0.004, crossSkinMat, 0, 0, 0);
-const crossSkinV = box(0.006, 1, 0.004, crossSkinMat, 0, 0, 0);
-for (const m of [crossSkinH, crossSkinV]) { m.castShadow = false; m.visible = false; }
 
 /* ============================================================
    攝影檯 + 檯面偵檢板
@@ -358,8 +384,7 @@ const S = {
   tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
   ws:   { h: 1.50 },
   det:  { x: 1.38, z: 0.55, on: 0 },
-  laser: { gapFrom: 0, gapTo: 0, skin: null },
-  cross: null,
+  laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },   // skinOn=1 -> 雷射畫上皮膚(shader)
   room: { lie: 0, ox: 0, oy: 0, oz: 0 }   // lie=1 -> 房間旋轉(人偶保持站立=圖面上躺下)
 };
 
@@ -484,25 +509,16 @@ function applyAll() {
       laserR.scale.x = Math.max(0.001, LASER_X1 - gT);
       laserR.position.set((gT + LASER_X1) / 2, ly, WS.faceZ + 0.005);
     }
-    const sk = S.laser.skin;
-    laserSkin.visible = !!sk;
-    if (sk) {
-      laserSkin.scale.x = sk.len;
-      laserSkin.position.set(sk.x, ly, sk.z);
-    }
   }
-  // 體表光野十字({x,y,z,lenH,lenV,flat}:flat=橫躺面(如仰臥腹部),V 臂轉去 z 方向)
-  {
-    const c = S.cross;
-    crossSkinH.visible = crossSkinV.visible = !!c;
-    if (c) {
-      crossSkinH.scale.x = c.lenH;
-      crossSkinH.position.set(c.x, GL + c.y, c.z);
-      crossSkinV.rotation.x = c.flat ? Math.PI / 2 : 0;
-      crossSkinV.scale.y = c.lenV;
-      crossSkinV.position.set(c.x, GL + c.y, c.z);
-    }
-  }
+  // 皮膚著色 uniform:雷射面 + 光束逆矩陣(十字/光野畫在體表,任何視角正確)
+  uLaserOn.value = (!S.room.lie && S.laser.skinOn) ? 1 : 0;
+  uLaserY.value = GL + S.ws.h;
+  uFieldW.value = S.tube.fieldW;
+  uFieldH.value = S.tube.fieldH;
+  uBeamLen.value = L;
+  uCrossOn.value = S.tube.beamOn ? 1 : 0;
+  beamGroup.updateWorldMatrix(true, false);
+  uBeamInv.value.copy(beamGroup.matrixWorld).invert();
 
   if (figure.update) figure.update();
 
@@ -522,8 +538,7 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -8 },
     tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
-    laser: { gapFrom: -1.03, gapTo: -0.77, skin: { x: -0.9, z: -1.325, len: 0.24 } },
-    cross: { x: -0.9, y: 1.50, z: -1.323, lenH: 0.16, lenV: 0.12 },
+    laser: { gapFrom: -1.03, gapTo: -0.77, skinOn: 1 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
   },
   "pelvis-ap": {
@@ -538,8 +553,7 @@ const PRESETS = {
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.55, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },
-    laser: { gapFrom: 0, gapTo: 0, skin: null },
-    cross: { x: 0.55, y: 0.99, z: 0.55, lenH: 0.20, lenV: 0.20, flat: true },
+    laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "ankle-ap": {
@@ -551,8 +565,7 @@ const PRESETS = {
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 1.38, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24, beamOn: 1 },
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 1 },
-    laser: { gapFrom: 0, gapTo: 0, skin: null },
-    cross: null,
+    laser: { gapFrom: 0, gapTo: 0, skinOn: 0 },
     cam: { px: 2.4, py: 1.6, pz: 2.2, tx: 0.9, ty: 0.85, tz: 0.5 }
   }
 };
@@ -564,8 +577,7 @@ function applyPreset(key) {
   Object.assign(S.tube, p.tube);
   Object.assign(S.ws, p.ws);
   Object.assign(S.det, p.det);
-  S.laser = p.laser ? JSON.parse(JSON.stringify(p.laser)) : { gapFrom: 0, gapTo: 0, skin: null };
-  S.cross = p.cross ? JSON.parse(JSON.stringify(p.cross)) : null;
+  S.laser = p.laser ? { ...p.laser } : { gapFrom: 0, gapTo: 0, skinOn: 0 };
   S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
@@ -760,7 +772,7 @@ document.getElementById("importFile").addEventListener("change", e => {
         Object.assign(S.fig, data.S.fig); Object.assign(S.tube, data.S.tube);
         Object.assign(S.ws, data.S.ws); Object.assign(S.det, data.S.det);
         if (data.S.laser) S.laser = data.S.laser;
-        S.cross = data.S.cross || null;
+        if (data.S.room) S.room = data.S.room;
       }
       if (data.joints) for (const [p, v] of Object.entries(data.joints)) setJoint(p, v);
       applyAll(); syncSliders();
