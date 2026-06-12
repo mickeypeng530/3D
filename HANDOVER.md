@@ -69,6 +69,7 @@
   - leg: x屈髖 z外展(**y 鎖死**)/ **thigh: 只有 y**(大腿內外旋)/ knee: x z / **shin: 只有 y**(小腿旋轉)/ ankle: x z / foot: x
   - arm: x y z 全活 / **elbow: 只有 y**(屈肘)/ **forearm: 只有 x**(旋前旋後)/ wrist: y z(x 鎖死)
   - head/chest/waist/torso: 全活。新增滑桿前先 `figure[part][axis]=33` 寫入讀回驗證
+  - **左右關節內建鏡像:對稱動作用「同號」**(兩腿內旋 = l_thigh.y 與 r_thigh.y 都 -18;雙臂垂放 = 都 -72)。不要像一般骨架那樣左右反號
 
 ## 5. 接手者 cheatsheet
 
