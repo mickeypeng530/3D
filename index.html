@@ -205,9 +205,9 @@ function beamPaint(base, onSurface) {
   // 點點花紋(病人服):模型空間網格點,布上才顯現
   const dots = sin(x.mul(95)).mul(sin(y.mul(95))).mul(sin(z.mul(95)));
   const dotMask = smoothstep(float(0.5), float(0.85), dots).mul(clothMask).mul(0.10);
-  const gown = color("#c3d2e4");                       // 淺藍灰病人服
+  const gown = color("#8ba6cc");                       // 中藍病人服
   let c = mix(color("#bfc4cb"), gown, clothMask);
-  c = mix(c, color("#9fb0c8"), dotMask);               // 點點略深
+  c = mix(c, color("#6f8cb4"), dotMask);               // 點點略深
 
   // 光野 + 十字(畫在皮膚上)
   c = beamPaint(c);
