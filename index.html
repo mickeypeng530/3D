@@ -693,15 +693,22 @@ function syncSliders() {
 }
 
 // 視角精準控制(以 controls.target 為中心的球面角,房間座標 -> 臥位場景也正確)
-const camS = { az: 35, el: 25, dist: 3, height: 0 };
-let camHApplied = 0;   // 已套用的高度位移(真實垂直 world Y),供 delta 平移
-// 高度 = 沿 world +Y 平移取景(相機與焦點同步移,角度不變);臥/站皆正確
+const camS = { az: 35, el: 25, dist: 3, height: 0, eye: 1.6 };
+let camHApplied = 0;   // 已套用的取景升降位移(world Y),供 delta 平移
+// 取景升降 = 沿 world +Y 平移(相機與焦點同步移,角度不變);臥/站皆正確
 function applyCamHeight() {
   const dy = camS.height - camHApplied;
   controls.target.y += dy;
   camera.position.y += dy;
   camHApplied = camS.height;
   controls.update();
+  readCamAngles();
+}
+// 鏡頭離地高 = 只移相機本身(焦點不動),拉高更俯視
+function applyEyeHeight() {
+  camera.position.y = GL + camS.eye;
+  controls.update();
+  readCamAngles();
 }
 function applyCamAngles() {
   const azR = THREE.MathUtils.degToRad(camS.az), elR = THREE.MathUtils.degToRad(camS.el);
@@ -720,13 +727,15 @@ function readCamAngles() {
   camS.dist = Math.max(0.3, v.length());
   camS.el = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(v.y / camS.dist, -1, 1)));
   camS.az = THREE.MathUtils.radToDeg(Math.atan2(v.x, v.z));
+  camS.eye = camera.position.y - GL;
 }
 {
   const g = addGroup("視角(可精準調)", true);
   addSlider(g, "水平角", -180, 180, 1, () => camS.az, v => { camS.az = v; applyCamAngles(); });
   addSlider(g, "垂直角", -10, 89, 1, () => camS.el, v => { camS.el = v; applyCamAngles(); });
   addSlider(g, "距離 (m)", 0.6, 5, 0.05, () => camS.dist, v => { camS.dist = v; applyCamAngles(); });
-  addSlider(g, "高度 (m)", -1.2, 1.2, 0.02, () => camS.height, v => { camS.height = v; applyCamHeight(); });
+  addSlider(g, "取景升降 (m)", -1.2, 1.2, 0.02, () => camS.height, v => { camS.height = v; applyCamHeight(); });
+  addSlider(g, "鏡頭離地 (m)", 0.2, 2.9, 0.02, () => camS.eye, v => { camS.eye = v; applyEyeHeight(); });
 }
 
 {
