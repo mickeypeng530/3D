@@ -70,6 +70,9 @@
   - arm: x y z 全活 / **elbow: 只有 y**(屈肘)/ **forearm: 只有 x**(旋前旋後)/ wrist: y z(x 鎖死)
   - head/chest/waist/torso: 全活。新增滑桿前先 `figure[part][axis]=33` 寫入讀回驗證
   - **左右關節內建鏡像:對稱動作用「同號」**(兩腿內旋 = l_thigh.y 與 r_thigh.y 都 -18;雙臂垂放 = 都 -72)。不要像一般骨架那樣左右反號
+- 🔑🔑 **人偶完全不吃場景燈**(2026-06-14 證實):任何 AmbientLight / DirectionalLight / cameraLight 改 intensity 對人偶零效果(變形綁在材質內,材質不能換)。俯臥/側臥時背光面會全黑。**解法:material.emissiveNode = colorNode × wrap-diffuse 自照亮**(`shade = (normalWorld·Ldir·0.5+0.5)·0.5+0.42`,Ldir≈(0.3,0.85,0.45))→ 任何體位都明亮、又有立體感。改 emissiveNode 後站姿/仰臥/俯臥全部一致變好。**別再花時間調燈去救人偶亮度**
+- **俯臥(prone)= 仰臥 preset 把 fig.rotY 設 180**(臉朝下);頭轉 = head.y;Stenver's/Arcelin 已用此法。scene.background 改色無效(disfigure World 自管 clear)
+- ⚠️ **WebGPU 截圖偶爾回傳舊幀**:reload 後第一次要等 ~4s,且 renderOnce 連呼 3 次中間 sleep 50ms 才穩;懷疑卡幀就 location.reload()
 
 ## 5. 接手者 cheatsheet
 

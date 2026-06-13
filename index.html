@@ -190,6 +190,12 @@ function beamPaint(base) {
   c = beamPaint(c);
 
   figure.material.colorNode = c;
+  // 自發光:人偶變形綁在材質內不能換,且不吃場景燈(尤其俯臥/側臥背光面全黑)。
+  // 用 emissiveNode 給一個與朝向相關的自照亮,任何體位都看得見、又不死板。
+  const Ldir = new THREE.Vector3(0.3, 0.85, 0.45).normalize();
+  const ndl = normalWorld.dot(uniform(Ldir)).mul(0.5).add(0.5);   // wrap diffuse 0~1
+  const shade = ndl.mul(0.5).add(0.42);                            // 0.42~0.92
+  figure.material.emissiveNode = c.mul(shade);
   figure.material.needsUpdate = true;
 }
 
@@ -594,6 +600,37 @@ const PRESETS = {
     ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 1 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
     cam: { px: 2.4, py: 1.6, pz: 2.2, tx: 0.9, ty: 0.85, tz: 0.5 }
+  },
+  "skull-stenvers": {
+    label: "頭顱 Stenver's 位(俯臥,顳骨岩部)",
+    // 本院 SOP:俯臥,面轉對側,患側 顴/鼻/額 3 點接觸;正中矢狀面與檯面 45°;
+    // CR 向腳側傾 12°,由患側外耳孔前 2cm 射入;SID 100;受片 8x10 直放
+    // 俯臥 = rotY 180(臉朝下);頭轉 45° = head.y;頭在 room x≈0
+    fig: { x: 0, z: 0.855, y: 0, rotY: 180, rotZ: 0 },
+    joints: {
+      "l_arm.z": -72, "r_arm.z": -72,
+      "head.y": 45
+    },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: -0.13, z: 0.55, h: 1.70, pitch: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: -0.13, y: 0.95, z: 0.55, rx: 0.16, ry: 0.15, rz: 0.16 },   // 頭部影子
+    cam: { px: -0.1, py: 1.5, pz: 1.4, tx: -0.1, ty: 0.95, tz: 0.55 }
+  },
+  "skull-stenvers-arcelin": {
+    label: "頭顱 Arcelin 位(仰臥,Reverse Stenver's)",
+    // 無法俯臥者替代法:仰臥,頭轉對側、健側貼檯;其餘角度同 Stenver's
+    // 仰臥 = rotY 0(臉朝上);頭轉 45° = head.y
+    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
+    joints: {
+      "l_arm.z": -72, "r_arm.z": -72,
+      "head.y": 45
+    },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: -0.13, z: 0.55, h: 1.70, pitch: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: -0.13, y: 0.95, z: 0.55, rx: 0.16, ry: 0.15, rz: 0.16 },
+    cam: { px: -0.1, py: 1.5, pz: 1.4, tx: -0.1, ty: 0.95, tz: 0.55 }
   }
 };
 
