@@ -336,41 +336,44 @@ tubeRig.add(yoke);
 
 const tubeHead = new THREE.Group();
 tubeRig.add(tubeHead);
+// 機身視覺群組(可獨立打斜,與光束解耦:光束留在 tubeHead 垂直,機身 tubeBody 視覺傾斜)
+const tubeBody = new THREE.Group();
+tubeHead.add(tubeBody);
 {
   const housing = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.30, 8, 24), mat.panel);
   housing.rotation.z = Math.PI / 2;
   housing.castShadow = true;
-  tubeHead.add(housing);
+  tubeBody.add(housing);
   const colli = new THREE.Mesh(new RoundedBoxGeometry(0.20, 0.17, 0.20, 4, 0.02), mat.panel);
   colli.position.y = -0.175;
   colli.castShadow = true;
-  tubeHead.add(colli);
+  tubeBody.add(colli);
   const aper = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.012, 0.10), mat.dark);
   aper.position.y = -0.262;
-  tubeHead.add(aper);
+  tubeBody.add(aper);
   for (const sx of [-1, 1]) {
     const grip = new THREE.Mesh(new THREE.CapsuleGeometry(0.014, 0.16, 4, 10), mat.panel);
     grip.rotation.x = Math.PI / 2;
     grip.position.set(sx * 0.135, -0.175, 0);
     grip.castShadow = true;
-    tubeHead.add(grip);
+    tubeBody.add(grip);
     for (const sz of [-1, 1]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.05, 8), mat.panel);
       post.rotation.z = Math.PI / 2;
       post.position.set(sx * 0.115, -0.175, sz * 0.06);
-      tubeHead.add(post);
+      tubeBody.add(post);
     }
   }
   const cHandle = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.024, 12, 32, Math.PI), mat.panel);
   cHandle.position.y = 0.05;
   cHandle.castShadow = true;
-  tubeHead.add(cHandle);
+  tubeBody.add(cHandle);
   const btnMat = new THREE.MeshLambertMaterial({ color: 0x8fa3c8 });
   for (const sx of [-0.085, 0.085]) {
     for (const i of [-1, 0, 1]) {
       const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.014, 14), btnMat);
       btn.position.set(sx, 0.105, i * 0.052);
-      tubeHead.add(btn);
+      tubeBody.add(btn);
     }
   }
 }
@@ -501,7 +504,9 @@ function applyAll() {
   tubeRig.position.set(S.tube.x, 0, S.tube.z);
   tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
   tubeHead.position.y = GL + S.tube.h;
-  tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);
+  tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);   // 控制光束(beamGroup 在此群組內)
+  // 機身視覺傾斜(bodyTilt 相對 tubeHead;與光束解耦,只動外觀)
+  tubeBody.rotation.x = THREE.MathUtils.degToRad(S.tube.bodyTilt || 0);
   yoke.position.y = GL + S.tube.h + 0.135;
   const colLen = ROOM.h - 0.1 - S.tube.h;
   column.scale.y = colLen;
@@ -554,7 +559,7 @@ function applyAll() {
 
   document.getElementById("readout").innerHTML =
     `SID:<b>${sidTxt}</b><br>` +
-    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,俯仰 <b>${S.tube.pitch}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
+    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 角 <b>${(S.tube.pitch + (S.tube.bodyTilt || 0))}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
 }
 
@@ -617,7 +622,7 @@ const PRESETS = {
     // 否則 12° 在 ~0.7m 投程會把方形光野「走」到頭後檯面。
     // 使用者校正:十字落顳/臉(橫線過耳中)。SID 100(h=1.74)。
     // 12° caudad 是 CR-IR 角度(readout 記載);光束視覺維持垂直,否則 100cm 投程下 12° 會把光野走位 18cm 掉出側轉的耳。
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋;機身視覺斜 12°,光束垂直
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },   // 頭部影子
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
@@ -632,7 +637,7 @@ const PRESETS = {
       "head.y": 45
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋,SID 100
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋,SID 100;機身斜 12°
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
@@ -643,6 +648,7 @@ function applyPreset(key) {
   const p = PRESETS[key];
   if (!p) return;
   Object.assign(S.fig, p.fig);
+  S.tube.bodyTilt = 0;   // 預設歸零(preset 沒指定就不殘留上一個的視覺斜)
   Object.assign(S.tube, p.tube);
   Object.assign(S.ws, p.ws);
   Object.assign(S.det, p.det);
@@ -801,7 +807,8 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "位置 X (m)", -2.2, 2.4, 0.01, () => S.tube.x, v => S.tube.x = v);
   addSlider(g, "位置 Z (m)", -1.8, 2.1, 0.01, () => S.tube.z, v => S.tube.z = v);
   addSlider(g, "焦點高 (m)", 0.5, 2.2, 0.01, () => S.tube.h, v => S.tube.h = v);
-  addSlider(g, "俯仰角", -10, 120, 1, () => S.tube.pitch, v => S.tube.pitch = v);
+  addSlider(g, "俯仰角(光束)", -10, 120, 1, () => S.tube.pitch, v => S.tube.pitch = v);
+  addSlider(g, "機身視覺斜", -30, 30, 1, () => (S.tube.bodyTilt || 0), v => S.tube.bodyTilt = v);
   addSlider(g, "水平旋轉", -180, 180, 1, () => S.tube.yaw, v => S.tube.yaw = v);
   addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
   addSlider(g, "光野高 (cm)", 5, 45, 1, () => S.tube.fieldH * 100, v => S.tube.fieldH = v / 100);
