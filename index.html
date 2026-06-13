@@ -189,9 +189,9 @@ function beamPaint(base, onSurface) {
   const torsoBand = smoothstep(float(1.04), float(1.10), y).mul(smoothstep(float(1.60), float(1.52), y));  // 上緣升到肩
   const sideIn = smoothstep(float(0.34), float(0.28), abs(x));                 // 加寬到含肩
   // 圓領口:高 y + 前 z + 近中線 三者皆成立處挖空(露出胸前皮膚)
-  const openY = smoothstep(float(1.34), float(1.46), y);
+  const openY = smoothstep(float(1.48), float(1.56), y);   // 領口提高:只在喉部開,胸口蓋住
   const openZ = smoothstep(float(0.0), float(0.06), z);
-  const openX = smoothstep(float(0.15), float(0.08), abs(x));
+  const openX = smoothstep(float(0.13), float(0.07), abs(x));
   const neckline = openY.mul(openZ).mul(openX).oneMinus();
   let top = torsoBand.mul(sideIn).mul(neckline);
   // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
