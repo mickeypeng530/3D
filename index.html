@@ -186,8 +186,8 @@ function beamPaint(base, onSurface) {
   // 模型空間 y 0~1.785、x 左右、z 前後(胸在 +z)
   const y = positionGeometry.y, x = positionGeometry.x, z = positionGeometry.z;
   // 上衣:胸腹段,柔邊;圓領口 = 前胸高處挖一個圓(高 y + 前 z + 近中線)
-  const torsoBand = smoothstep(float(1.04), float(1.10), y).mul(smoothstep(float(1.50), float(1.44), y));
-  const sideIn = smoothstep(float(0.30), float(0.24), abs(x));                 // 軀幹寬(含肩袖)
+  const torsoBand = smoothstep(float(1.04), float(1.10), y).mul(smoothstep(float(1.60), float(1.52), y));  // 上緣升到肩
+  const sideIn = smoothstep(float(0.34), float(0.28), abs(x));                 // 加寬到含肩
   // 圓領口:高 y + 前 z + 近中線 三者皆成立處挖空(露出胸前皮膚)
   const openY = smoothstep(float(1.34), float(1.46), y);
   const openZ = smoothstep(float(0.0), float(0.06), z);
@@ -205,9 +205,9 @@ function beamPaint(base, onSurface) {
   // 點點花紋(病人服):模型空間網格點,布上才顯現
   const dots = sin(x.mul(95)).mul(sin(y.mul(95))).mul(sin(z.mul(95)));
   const dotMask = smoothstep(float(0.5), float(0.85), dots).mul(clothMask).mul(0.10);
-  const gown = color("#8ba6cc");                       // 中藍病人服
+  const gown = color("#7791ba");                       // 中深藍病人服
   let c = mix(color("#bfc4cb"), gown, clothMask);
-  c = mix(c, color("#6f8cb4"), dotMask);               // 點點略深
+  c = mix(c, color("#5d77a2"), dotMask);               // 點點略深
 
   // 光野 + 十字(畫在皮膚上)
   c = beamPaint(c);
