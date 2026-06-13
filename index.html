@@ -134,13 +134,14 @@ const uFocalR = uniform(new THREE.Vector3(0, 2, 0));   // 焦點(房間座標)
 const uOcclC = uniform(new THREE.Vector3(0, 0, 0));    // 身體遮擋橢球中心(房間座標)
 const uOcclR = uniform(new THREE.Vector3(1, 1, 1));    // 橢球半徑
 const uOcclOn = uniform(0);
+const uSurfaceField = uniform(1);   // 承光面是否顯示光野(0 = 只畫在人偶身上,檯面乾淨)
 const uFieldW = uniform(0.24);
 const uFieldH = uniform(0.30);
 const uBeamLen = uniform(1.0);
 const uCrossOn = uniform(1);
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
 // 套用在任何材質的 colorNode 上(人偶皮膚 + 牆/板/檯面),取代圓形 spotlight 光池
-function beamPaint(base) {
+function beamPaint(base, onSurface) {
   const posB = uBeamInv.mul(vec4(positionWorld, 1)).xyz;   // 光束局部(束軸 -Y)
   const d = posB.y.negate();
   const nearFade = smoothstep(float(0.05), float(0.15), d);
@@ -172,7 +173,9 @@ function beamPaint(base) {
   const isBody = step(pp.dot(pp), float(1.15));
   const lit = hit.mul(isBody.oneMinus()).mul(uOcclOn).oneMinus();
 
-  const fm = fieldMask.mul(lit);
+  // 承光面(檯/牆/板)可整體關閉光野(uSurfaceField=0 -> 光野只畫在人偶身上)
+  const surfGate = onSurface ? uSurfaceField : float(1);
+  const fm = fieldMask.mul(lit).mul(surfGate);
   let c = base.add(color("#ffcf6a").mul(fm.mul(0.5)));   // 暖橘光野,白皮膚上也看得見
   c = mix(c, c.mul(0.45), fm.mul(crossBand));            // 十字陰影帶
   return c;
@@ -232,7 +235,7 @@ if (cameraLight) cameraLight.intensity = 0.5;   // 相機跟隨光壓低(預設 
 // 承光面(牆/板/檯)用 node material,光野矩形 + 十字直接畫上去
 function beamLambert(hex) {
   const m = new THREE.MeshLambertNodeMaterial();
-  m.colorNode = beamPaint(color(hex));
+  m.colorNode = beamPaint(color(hex), true);
   return m;
 }
 const mat = {
@@ -542,6 +545,7 @@ function applyAll() {
   uFieldH.value = S.tube.fieldH;
   uBeamLen.value = L;
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
+  uSurfaceField.value = (S.surfaceField === 0) ? 0 : 1;   // 0 = 光野只畫在人偶身上,檯面乾淨
   beamGroup.updateWorldMatrix(true, false);
   uBeamInv.value.copy(beamGroup.matrixWorld).invert();
   // 身體遮擋橢球(房間座標)
@@ -622,7 +626,8 @@ const PRESETS = {
     // 否則 12° 在 ~0.7m 投程會把方形光野「走」到頭後檯面。
     // 使用者校正:十字落顳/臉(橫線過耳中)。SID 100(h=1.74)。
     // 12° caudad 是 CR-IR 角度(readout 記載);光束視覺維持垂直,否則 100cm 投程下 12° 會把光野走位 18cm 掉出側轉的耳。
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋;機身視覺斜 12°,光束垂直
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.19, beamOn: 1 },  // 8x10吋;機身視覺斜 12°,光束垂直
+    surfaceField: 0,   // 光野只畫在頭上,檯面不要有
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },   // 頭部影子
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
@@ -637,7 +642,8 @@ const PRESETS = {
       "head.y": 45
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋,SID 100;機身斜 12°
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.19, beamOn: 1 },  // 8x10吋,SID 100;機身斜 12°
+    surfaceField: 0,
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
@@ -654,6 +660,7 @@ function applyPreset(key) {
   Object.assign(S.det, p.det);
   S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   S.occl = p.occl ? { ...p.occl } : null;
+  S.surfaceField = (p.surfaceField === undefined) ? 1 : p.surfaceField;
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
   applyAll();
@@ -813,6 +820,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
   addSlider(g, "光野高 (cm)", 5, 45, 1, () => S.tube.fieldH * 100, v => S.tube.fieldH = v / 100);
   addSlider(g, "光野顯示", 0, 1, 1, () => S.tube.beamOn, v => S.tube.beamOn = v);
+  addSlider(g, "檯面光野", 0, 1, 1, () => (S.surfaceField === undefined ? 1 : S.surfaceField), v => S.surfaceField = v);
 }
 
 {
