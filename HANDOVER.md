@@ -16,8 +16,10 @@
 - ✅ 設備細節 pass:膠囊形球管殼 + 圓角準直儀 + 把手 + 接頭(yoke 掛 rig 不隨俯仰轉)、拱頂壁架殼(ExtrudeGeometry)、圓邊檯面(RoundedBoxGeometry)
 - ✅ **disfigure 平滑人偶實驗版 `disfigure.html`**(2026-06-12 spike 成功):無縫平滑身體 + **原生腳趾/手指**,MIT 授權,質感 = 使用者的 3D 擺位示範圖
 - ✅ **index.html 已全面遷移到 disfigure 引擎**(2026-06-13):完整滑桿 UI(54 個,含 disfigure 關節路徑 head/chest/waist/arm/elbow/wrist/leg/knee/ankle/foot 的 x/y/z)+ 雷射 gap/skin + 體表十字(含 flat 模式給仰臥)+ 手指 path 走 JSON 匯出入。男性人偶 Man(1.73)
-- ✅ **第一個缺照 view 模擬完成:pelvis-ap(骨盆前後位,仰臥)**——已 reviewed 缺照清單的第一筆。仰臥、雙臂體側、足內旋(ankle.z 近似)、CR 對骨盆中點、SID 102、光野 35x43
-- ⏳ 待辦:給使用者過目 pelvis-ap → 批次產「已 reviewed 缺照」其餘 9 筆 → 47 筆全補。臥位姿勢怪癖 workaround 已記錄(見下)
+- ✅ **使用者已定稿 2 個缺照 view**(2026-06-14):
+  - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
+  - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
+- ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
 
 ## 3. 架構速覽
 
