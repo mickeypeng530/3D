@@ -99,7 +99,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4, smoothstep, max } from "three/tsl";
+import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4, smoothstep, max, sin, floor as tslFloor } from "three/tsl";
 import { World, Man, scene, camera, renderer, controls, ground, light, cameraLight } from "disfigure";
 
 /* ============================================================
@@ -182,12 +182,32 @@ function beamPaint(base, onSurface) {
 }
 
 {
-  // 衣服:模型空間高度切色帶(y 0~1.785;dress() 在此版為 no-op)
-  const y = positionGeometry.y, x = positionGeometry.x;
-  const shorts = step(float(0.68), y).mul(step(y, float(1.06)));
-  const top = step(float(1.06), y).mul(step(y, float(1.46))).mul(step(abs(x), float(0.23)));
-  const clothMask = shorts.add(top).min(1);
-  let c = mix(color("#bfc4cb"), color("#54749e"), clothMask);
+  // 病人服(著色法升級):淺藍布 + 圓領口 + 短袖肩 + 點點花紋
+  // 模型空間 y 0~1.785、x 左右、z 前後(胸在 +z)
+  const y = positionGeometry.y, x = positionGeometry.x, z = positionGeometry.z;
+  // 上衣:胸腹段,柔邊;圓領口 = 前胸高處挖一個圓(高 y + 前 z + 近中線)
+  const torsoBand = smoothstep(float(1.04), float(1.10), y).mul(smoothstep(float(1.50), float(1.44), y));
+  const sideIn = smoothstep(float(0.30), float(0.24), abs(x));                 // 軀幹寬(含肩袖)
+  // 圓領口:高 y + 前 z + 近中線 三者皆成立處挖空(露出胸前皮膚)
+  const openY = smoothstep(float(1.34), float(1.46), y);
+  const openZ = smoothstep(float(0.0), float(0.06), z);
+  const openX = smoothstep(float(0.15), float(0.08), abs(x));
+  const neckline = openY.mul(openZ).mul(openX).oneMinus();
+  let top = torsoBand.mul(sideIn).mul(neckline);
+  // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
+  const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.54), float(0.50), abs(x)));
+  const armY = smoothstep(float(0.11), float(0.07), abs(y.sub(1.46)));
+  const armZ = smoothstep(float(0.12), float(0.08), abs(z));
+  const sleeve = armX.mul(armY).mul(armZ);
+  // 短褲:髖段全寬
+  const shorts = smoothstep(float(0.66), float(0.70), y).mul(smoothstep(float(1.08), float(1.02), y));
+  const clothMask = top.add(sleeve).add(shorts).min(1);
+  // 點點花紋(病人服):模型空間網格點,布上才顯現
+  const dots = sin(x.mul(95)).mul(sin(y.mul(95))).mul(sin(z.mul(95)));
+  const dotMask = smoothstep(float(0.5), float(0.85), dots).mul(clothMask).mul(0.10);
+  const gown = color("#c3d2e4");                       // 淺藍灰病人服
+  let c = mix(color("#bfc4cb"), gown, clothMask);
+  c = mix(c, color("#9fb0c8"), dotMask);               // 點點略深
 
   // 光野 + 十字(畫在皮膚上)
   c = beamPaint(c);
