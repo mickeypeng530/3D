@@ -615,10 +615,12 @@ const PRESETS = {
     // 球管對位:網格實測頭部朝上點 room x≈-0.02,z≈0.55(光野貼顳/頰)。
     // 12° caudad 是 CR-IR 角度(readout 記載);視覺光野維持垂直置中於頭部(真機亦置中於部位),
     // 否則 12° 在 ~0.7m 投程會把方形光野「走」到頭後檯面。
-    tube: { x: -0.02, z: 0.55, h: 1.50, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋
+    // 使用者校正:十字落顳/臉(橫線過耳中)。SID 100(h=1.74)。
+    // 12° caudad 是 CR-IR 角度(readout 記載);光束視覺維持垂直,否則 100cm 投程下 12° 會把光野走位 18cm 掉出側轉的耳。
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
-    occl: { x: -0.02, y: 0.85, z: 0.55, rx: 0.15, ry: 0.15, rz: 0.15 },   // 頭部影子
-    cam: { px: -0.02, py: 1.4, pz: 1.3, tx: -0.02, ty: 0.86, tz: 0.55 }
+    occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },   // 頭部影子
+    cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
   },
   "skull-stenvers-arcelin": {
     label: "頭顱 Arcelin 位(仰臥,Reverse Stenver's)",
@@ -630,10 +632,10 @@ const PRESETS = {
       "head.y": 45
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: -0.02, z: 0.55, h: 1.50, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, yaw: 0, fieldW: 0.20, fieldH: 0.25, beamOn: 1 },  // 8x10吋,SID 100
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
-    occl: { x: -0.02, y: 0.85, z: 0.55, rx: 0.15, ry: 0.15, rz: 0.15 },
-    cam: { px: -0.02, py: 1.4, pz: 1.3, tx: -0.02, ty: 0.86, tz: 0.55 }
+    occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },
+    cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
   }
 };
 
