@@ -255,13 +255,15 @@ const ROOM = { backZ: -1.9, leftX: -2.2, w: 4.6, d: 4.0, h: 2.9 };
 /* ============================================================
    壁架(單柱 + 深色內軌 + 圓角白匣)
    ============================================================ */
-const WS = { x: -0.9, faceZ: ROOM.backZ + 0.24 };
+const WS = { x: -0.9, faceZ: ROOM.backZ + 0.24 };   // x = 建模基準,實際位置由 S.ws.x 平移
+const wsAll = new THREE.Group();
+ROOMG.add(wsAll);
 {
-  rbox(0.30, ROOM.h, 0.13, 0.02, mat.metal, WS.x, ROOM.h / 2, ROOM.backZ + 0.075);
-  box(0.10, ROOM.h - 0.04, 0.012, mat.dark, WS.x, ROOM.h / 2, ROOM.backZ + 0.142);
+  rbox(0.30, ROOM.h, 0.13, 0.02, mat.metal, WS.x, ROOM.h / 2, ROOM.backZ + 0.075, wsAll);
+  box(0.10, ROOM.h - 0.04, 0.012, mat.dark, WS.x, ROOM.h / 2, ROOM.backZ + 0.142, wsAll);
 }
 const wsCarriage = new THREE.Group();
-ROOMG.add(wsCarriage);
+wsAll.add(wsCarriage);
 {
   rbox(0.15, 0.24, 0.12, 0.02, mat.metal, WS.x, 1.45, ROOM.backZ + 0.165, wsCarriage);
   rbox(0.62, 0.66, 0.09, 0.03, mat.panel, WS.x, 1.45, ROOM.backZ + 0.19, wsCarriage);
@@ -460,6 +462,7 @@ function applyAll() {
   }
   ROOMG.updateMatrixWorld(true);
 
+  wsAll.position.x = (S.ws.x === undefined ? -0.9 : S.ws.x) + 0.9;
   wsCarriage.position.y = S.ws.h - 1.45;
   tblDet.visible = !!S.det.on;
   tblDet.position.set(S.det.x, 0, S.det.z);
@@ -540,7 +543,7 @@ const PRESETS = {
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.52, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
-    ws: { h: 1.45 }, det: { x: 1.38, z: 0.55, on: 0 },
+    ws: { h: 1.45, x: -1.7 }, det: { x: 1.38, z: 0.55, on: 0 },   // 壁架移往頭側遠處,別擠在構圖裡
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "ankle-ap": {
@@ -707,6 +710,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
 {
   const g = addGroup("壁架與偵檢板", true);
   addSlider(g, "壁架板高 (m)", 0.4, 1.9, 0.01, () => S.ws.h, v => S.ws.h = v);
+  addSlider(g, "壁架 X (m)", -2.0, 0.2, 0.01, () => (S.ws.x === undefined ? -0.9 : S.ws.x), v => S.ws.x = v);
   addSlider(g, "檯板顯示", 0, 1, 1, () => S.det.on, v => S.det.on = v);
   addSlider(g, "檯板 X (m)", -0.4, 2.0, 0.01, () => S.det.x, v => S.det.x = v);
   addSlider(g, "檯板 Z (m)", 0.1, 1.0, 0.01, () => S.det.z, v => S.det.z = v);
