@@ -151,6 +151,7 @@ const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示
 const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
 const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
+const uCrossW = uniform(0.011);   // 十字線半寬(m),外緣(UI「十字線寬」可調)
 const uPaintR = uniform(0.15);    // 閘水平半徑(x/z):窄→排除舉起的手臂
 const uPaintRY = uniform(0.30);   // 閘垂直半徑(y):高→涵蓋整段頸,不必把水平半徑撐大
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
@@ -166,8 +167,8 @@ function beamPaint(base, onSurface) {
   const inZ = smoothstep(halfH.sub(0.015), halfH, abs(posB.z)).oneMinus();
   const fieldMask = nearFade.mul(farFade).mul(inX).mul(inZ).mul(uCrossOn);
   // 寬約 15mm 的軟邊十字陰影帶
-  const crossX = smoothstep(float(0.004), float(0.011), abs(posB.x)).oneMinus();
-  const crossZ = smoothstep(float(0.004), float(0.011), abs(posB.z)).oneMinus();
+  const crossX = smoothstep(uCrossW.mul(0.4), uCrossW, abs(posB.x)).oneMinus();
+  const crossZ = smoothstep(uCrossW.mul(0.4), uCrossW, abs(posB.z)).oneMinus();
   const crossBand = max(crossX, crossZ);
 
   // 身體遮擋:焦點->表面點 的射線若穿過身體橢球 = 在身體影子裡,不畫光野
@@ -201,7 +202,9 @@ function beamPaint(base, onSurface) {
   //   gate 關閉的 view(cspine-lateral)→ gateRegion=1 → 維持原本「光束打到哪畫到哪」的呈現。
   const dgate = positionWorld.sub(uPaintC);
   const pgd = vec3(dgate.x.div(uPaintR), dgate.y.div(uPaintRY), dgate.z.div(uPaintR)).length();   // 橢球正規化距離,內部 <1
-  const gateRegion = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
+  // 範圍閘只管「身體」;承光面(牆/板/檯)不受閘限制 → 光野+後頸投影陰影照常打到 X 光板。
+  const bodyGate = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
+  const gateRegion = onSurface ? float(1) : bodyGate;
   const fm = fieldMask.mul(lit).mul(surfGate).mul(gateRegion);
   // 範圍閘開啟的 view(光野只在小區域)→ 加強亮度與十字對比,曲面上也看得清楚
   const bright = mix(float(0.5), float(1.0), uPaintGateOn);
@@ -657,7 +660,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw17</span><br>` +
+    `<span style="color:#7fd1ff">build sw18</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -682,9 +685,9 @@ const PRESETS = {
     // 下顎抬起;CR 水平對 C7-T1(約 T1 棘突);SID 102。可向尾 3-5°
     fig: { x: -0.85, z: -1.42, y: 0, rotY: 90, rotZ: 0 },   // 側位(使用者調 x-0.85 位置才對)
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
-    tube: { x: -0.85, z: -0.64, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // CR 對齊頸 x-0.85;高度用「焦點高」滑桿微調到耳後約 2cm
-    surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
-    paintGate: { z: -1.37, r: 0.09, ry: 0.11 },   // 空間橢球閘:擺在後頸(z 偏球管側);r 窄排掉舉起的手臂(在 -z/板側)。純位置決定畫在哪,不用 facing → 後頸光線正常呈現
+    tube: { x: -0.94, z: -0.64, h: 1.5, pitch: 88, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.38, beamOn: 1 },  // 使用者微調:CR x-0.94、pitch 88、光野 16×38、SID 102
+    surfaceField: 1, showCross: 1,   // 板上也畫光野+後頸投影陰影(類似 swimmer 示範圖的光影)
+    paintGate: { z: -1.37, r: 0.13, ry: 0.20 },   // 空間橢球閘(只管身體):放大涵蓋後頸+肩;r 仍窄到排除舉起的手臂(在 -z/板側)。承光面不受此閘限制(板上照常投影)
     beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
@@ -986,6 +989,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "水平旋轉", -180, 180, 1, () => S.tube.yaw, v => S.tube.yaw = v);
   addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
   addSlider(g, "光野高 (cm)", 5, 45, 1, () => S.tube.fieldH * 100, v => S.tube.fieldH = v / 100);
+  addSlider(g, "十字線寬 (mm)", 1, 30, 0.5, () => uCrossW.value * 2000, v => uCrossW.value = v / 2000);
   addSlider(g, "光野顯示", 0, 1, 1, () => S.tube.beamOn, v => S.tube.beamOn = v);
   addSlider(g, "檯面光野", 0, 1, 1, () => (S.surfaceField === undefined ? 1 : S.surfaceField), v => S.surfaceField = v);
 }
