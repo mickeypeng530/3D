@@ -1,6 +1,17 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(headless 截圖管道打通 + 十字穿透/手臂著色實機修正,build sw16)
+> 最後更新:2026-06-15(headless 截圖管道打通;十字著色改「純空間閘」、移除 facing,build sw17)
+
+## ⚠️ 著色機制重大修正(sw17,推翻 sw14-16 的 facing 路線)
+**結論:facing(用法線·朝球管 判斷正反面)是錯的路線,已整段移除。** 十字/光野本來就該畫在
+**球管入射側的後頸(耳後)**——那面就是要顯示光線的地方;facing 卻把「沒朝球管的面」關掉,反而
+①把該顯示的後頸光線砍掉、②連帶把 cspine(無閘 view)原本正常的後頸光線也弄不見。使用者明確回報:
+「後頸光線沒辦法呈現;cspine 原本沒問題、被你改壞」。
+**正解 = 純『空間橢球閘』**:`fm = fieldMask·lit·surfGate·gateRegion`,`gateRegion = mix(1, smoothstep(1.10,0.92,pgd), uPaintGateOn)`,
+`pgd` 是把表面點對 `uPaintC`(中心)、`uPaintR`(x/z 半徑)、`uPaintRY`(y 半徑)做橢球正規化的距離。
+- **只靠位置決定畫在哪**:把橢球擺在後頸(z 偏球管側),橢球夠小就只罩到該處 → 不穿到對側、不沾手臂、後頸光線正常。
+- **gate 關閉的 view(cspine-lateral)**:gateRegion=1 → 維持原本「光束打到哪畫到哪(含後頸)」,**= 使用者說的原本正確行為**。
+- swimmer 預設:`tube {x:-0.85, h:1.52}`、`paintGate {z:-1.37, r:0.09, ry:0.11}`。**十字確切高度(耳後約 2cm)請用「焦點高」+「閘 深度Z」滑桿微調**(中心跟球管 x/高,深度獨立)。
 
 ## 🆕 重大:headless Chrome 可直接截 WebGPU 圖(接手者必讀)
 **以前**只能靠使用者線上回報、瞎猜。**現在**本機 headless Chrome 能直接 render WebGPU 出圖,Claude 可自己看畫面除錯。

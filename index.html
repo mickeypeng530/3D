@@ -193,19 +193,16 @@ function beamPaint(base, onSurface) {
   //   + 只在「正對球管」的窄錐面著色。
   // ⚠️ 之前用「球形閘」:要 r 夠大才蓋整段頸,但同時把經過頸側的手臂也包進去 → 手臂出現十字。
   //    改各向異性橢球(y 撐高、x/z 收窄)即可只罩脖子。
+  // 🔑 範圍閘 = 純「空間橢球」(不再用 facing 法線判斷正反面)。
+  //   為什麼不用 facing:facing 會把「沒朝球管的那面」整個關掉,但十字/光野本來就該畫在
+  //   「球管入射側的後頸(耳後)」——那面對使用者而言就是要顯示光線的地方。facing 反而把它關掉,
+  //   還連帶把 cspine(無閘 view)原本正常的後頸光線也砍掉。改用空間閘:把橢球擺在目標位置
+  //   (後頸/耳後),只在橢球內畫;只要橢球夠小且擺對位置,自然只罩到該處、不會穿到對側或手臂。
+  //   gate 關閉的 view(cspine-lateral)→ gateRegion=1 → 維持原本「光束打到哪畫到哪」的呈現。
   const dgate = positionWorld.sub(uPaintC);
   const pgd = vec3(dgate.x.div(uPaintR), dgate.y.div(uPaintRY), dgate.z.div(uPaintR)).length();   // 橢球正規化距離,內部 <1
-  const toFocal = uFocalR.sub(posR).normalize();
-  // facing:只畫「正對球管的身體正面」,避免十字/光野穿到背側(承光面=牆/板/檯不套用)。
-  //   ⚠️🔑 這條對「身體」一律生效——即使沒開範圍閘的 view(如 cspine-lateral)也要套,
-  //         否則十字會直接穿到脖子背面(「十字穿透」)。舊版 facing 包在 gateVal 內、
-  //         gate 關閉時整個被 mix 成 1 → facing 失效 → 才會穿透。
-  //   十字水平線是「過束軸的水平面」會橫繞垂直脖子一圈;門檻太鬆(舊 0.22≈77°)會讓側面也被畫。
-  //   收緊到 smoothstep(0.30,0.62)≈只留真正正對球管的窄錐。
-  const facing = onSurface ? float(1) : smoothstep(float(0.30), float(0.62), normalWorld.dot(toFocal));
-  // 範圍閘(高瘦橢球):只在 gate 開啟的 view 把著色限制到頸部一小段;關閉時 = 1(不限範圍)。
   const gateRegion = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
-  const fm = fieldMask.mul(lit).mul(surfGate).mul(facing).mul(gateRegion);
+  const fm = fieldMask.mul(lit).mul(surfGate).mul(gateRegion);
   // 範圍閘開啟的 view(光野只在小區域)→ 加強亮度與十字對比,曲面上也看得清楚
   const bright = mix(float(0.5), float(1.0), uPaintGateOn);
   const crossDark = mix(float(0.45), float(0.28), uPaintGateOn);
@@ -660,7 +657,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw16</span><br>` +
+    `<span style="color:#7fd1ff">build sw17</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -685,9 +682,9 @@ const PRESETS = {
     // 下顎抬起;CR 水平對 C7-T1(約 T1 棘突);SID 102。可向尾 3-5°
     fig: { x: -0.85, z: -1.42, y: 0, rotY: 90, rotZ: 0 },   // 側位(使用者調 x-0.85 位置才對)
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
-    tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
+    tube: { x: -0.85, z: -0.64, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // CR 對齊頸 x-0.85;高度用「焦點高」滑桿微調到耳後約 2cm
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
-    paintGate: { z: -1.38, r: 0.09, ry: 0.10 },   // 橢球閘:中心偏球管側(z 偏 +)、r 窄排掉舉起的手臂(在 -z/板側)、ry 壓低不畫到耳/下顎;facing 已排背側
+    paintGate: { z: -1.37, r: 0.09, ry: 0.11 },   // 空間橢球閘:擺在後頸(z 偏球管側);r 窄排掉舉起的手臂(在 -z/板側)。純位置決定畫在哪,不用 facing → 後頸光線正常呈現
     beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
