@@ -20,7 +20,7 @@
   - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
   - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
   - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 **h=1.76 真斜 8° caudad(pitch 82)**、SID 100、光野 20×24。**示意圖風格**:`showCross:0` + `surfaceField:0` + 側面 profile 相機(對照 `..\Xray\caldwell view示意圖.png`)。CR 真斜(非假機身斜),想要完整 SOP 15° 把 pitch 調 75
-  - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**軀幹前傾 waist.x +10°**(臉到板而胸口不陷,見下「臉貼板」坑)+ **頭後仰 head.x -26°**(下巴上抬、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.52、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片
+  - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**軀幹前傾分散 chest.x 6 + waist.x 9**(臉到板而胸口不陷,見下「臉貼板」坑)+ **頭微後仰 head.x -4**(下巴上抬、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.52、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片(使用者於工具內調定:胸彎6/腰彎9/點頭-4)
 - ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
 - **2026-06-14 全域風格化**:① 膚色基底改暖色淺咖啡 `#c9b29a`(原 `#bfc4cb`,影響所有 view);② 病人服上衣下緣延伸到與短褲相接(torsoBand 下緣 0.70-0.80),腰部不再露膚 = 連續一件式;③ 新增 `uShowCross` uniform + per-preset `showCross` 旗標(0=只留柔光罩不畫十字),示意圖風格用
 
@@ -64,7 +64,7 @@
   - 內建 sun(DirectionalLight)放在 ROOMG 內隨房間轉,disfigure 的世界光壓到 0.35 → 臥位圖光影方向仍自然
   - 站立姿勢的足內旋 `leg.y ±12`、雙臂 `arm.z -72` 全部正常可用
 - **spotlight 光野強度:預設 30**(UI 有「光線」滑桿群可調主光/環境光/光野;120 在 SID 75cm 會過曝)
-- **病人服 = TSL colorNode 高度帶**(模型空間 y,disfigure rest=T-pose):上衣 torsoBand y 0.70-1.60(下緣已降到接短褲)× sideIn |x|<0.34 × 圓領口挖空;短袖 sleeve(armX |x| 0.26-0.54、armY≈1.46、armZ |z|<0.12);短褲 y 0.66-1.08 全寬;點點花紋 sin 網格。gown 色 `#7791ba`、膚色 `#c9b29a`。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
+- **病人服 = TSL colorNode 高度帶**(模型空間 y,disfigure rest=T-pose):上衣 torsoBand y 0.70-1.60(下緣已降到接短褲)× sideIn |x|<0.34 × 圓領口挖空;短袖 sleeve(armX |x| 0.28-0.43 = 收到 proximal humerus 上臂近端 1/3、armY≈1.46、armZ |z|<0.12);短褲 y 0.66-1.08 全寬;點點花紋 sin 網格。gown 色 `#7791ba`、膚色 `#c9b29a`。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
 - 🔑 **雷射/十字/光野「畫在皮膚上」(TSL,2026-06-13)**:同一個 colorNode 接著做三層 — ① 光野亮區:positionWorld 經 `uBeamInv`(beamGroup.matrixWorld 逆矩陣 uniform)轉光束局部座標,錐內(線性放大的 field 範圍)加暖色;② 十字:光束局部 |x|或|z| < 3.5mm 變暗;③ 雷射:`|positionWorld.y - uLaserY| < 4.2mm` 且 `normalWorld.z > -0.1`(只畫面向雷射源的表面)染紅。**任何視角都貼著身體輪廓**,完全取代會浮空的貼片(crossSkin/laserSkin 已刪),十字也不再需要逐 preset 手動標位。uniform 在 applyAll 末端更新(記得 `beamGroup.updateWorldMatrix` 後再 invert)。牆上雷射線仍是 L/R 兩段幾何(平面上貼片不會穿幫),gap 機制保留
 - **光野視覺規格(對照 Skull AP 實拍)**:柔邊「矩形」暖光 + 寬 ~15mm 軟邊十字陰影。承光面(牆/板/檯/偵檢板)用 `beamLambert()`(MeshLambertNodeMaterial + 共用 beamPaint TSL 鏈)。**spotlight 預設 0**(只當氛圍光,由滑桿開)。⚠️ 半透明光錐 DoubleSide 多層疊加會變白盤 → FrontSide + opacity 0.07
 - **標準視角按鈕**(斜45/正面/側面/正上)方向用房間座標經 ROOMG 轉換,臥位也正確;正上方刻意偏斜 (0.45,1,0.45) 避開球管;臥位時「側面」≈ 從腳底看(房間座標語意),要更名再說

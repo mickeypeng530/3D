@@ -198,7 +198,7 @@ function beamPaint(base, onSurface) {
   const neckline = openY.mul(openZ).mul(openX).oneMinus();
   let top = torsoBand.mul(sideIn).mul(neckline);
   // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
-  const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.54), float(0.50), abs(x)));
+  const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.43), float(0.39), abs(x)));   // 外緣收到 proximal humerus(上臂近端 ~1/3),不再延到手肘
   const armY = smoothstep(float(0.11), float(0.07), abs(y.sub(1.46)));
   const armZ = smoothstep(float(0.12), float(0.08), abs(z));
   const sleeve = armX.mul(armY).mul(armZ);
@@ -697,8 +697,8 @@ const PRESETS = {
     // CR 垂直入射(無 caudad),通過上頷竇中心(鼻尖後方 acanthion);SID 100
     // 與 Caldwell 差別:頭後仰(下巴貼板取代前額貼板)、CR 不傾。防雷:仰角別過大
     fig: { x: -0.9, z: -1.52, y: 0, rotY: 180, rotZ: 0 },   // 後移留前傾空間
-    // 軀幹前傾 waist.x 10°(骨盆後、上身靠向立架),臉到板而胸口不陷;頭再後仰補回 OML 37°
-    joints: { "l_arm.z": -72, "r_arm.z": -72, "waist.x": 10, "head.x": -26 },
+    // 軀幹前傾分散到胸+腰(chest.x 6 + waist.x 9),臉到板而胸口不陷;頭微後仰 -4 補 OML
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "chest.x": 6, "waist.x": 9, "head.x": -4 },
     tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100;水平垂直入射 acanthion(鼻基)
     surfaceField: 0,   // 光野只畫在頭上
     showCross: 0,      // 示意圖風格:只留柔光罩
