@@ -199,9 +199,10 @@ function beamPaint(base, onSurface) {
   let top = torsoBand.mul(sideIn).mul(neckline);
   // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
   const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.43), float(0.39), abs(x)));   // 外緣收到 proximal humerus(上臂近端 ~1/3),不再延到手肘
-  const armY = smoothstep(float(0.11), float(0.07), abs(y.sub(1.46)));
-  const armZ = smoothstep(float(0.12), float(0.08), abs(z));
-  const sleeve = armX.mul(armY).mul(armZ);
+  // 袖子橫截面用「離手臂中心線的徑向距離」(rest 中心≈y1.46,z0),避免水平 y 帶斜切下垂手臂造成斜向 hem
+  const dy = y.sub(1.46), armR2 = dy.mul(dy).add(z.mul(z));
+  const armTube = smoothstep(float(0.016), float(0.008), armR2);   // 半徑 ~0.09→0.13 m 的圓管(平方比較)
+  const sleeve = armX.mul(armTube);
   // 短褲:髖段全寬
   const shorts = smoothstep(float(0.66), float(0.70), y).mul(smoothstep(float(1.08), float(1.02), y));
   const clothMask = top.add(sleeve).add(shorts).min(1);
