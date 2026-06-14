@@ -677,9 +677,9 @@ const PRESETS = {
     // 本院 SOP:坐/站於立式偵檢板前,前額+鼻貼板,OML 垂直偵檢板;
     // CR 向腳側傾 15°,由鼻根射出;SID 100。PA:面向壁架,球管在後水平射向壁架
     // 面向壁架 = rotY 180(臉朝 -z 後牆);球管在 +z 側水平射 -z(pitch 90)
-    fig: { x: -0.9, z: -1.50, y: 0, rotY: 180, rotZ: 0 },   // 臉貼板
-    joints: { "l_arm.z": -72, "r_arm.z": -72 },
-    tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 15, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100,機身斜 15° caudad
+    fig: { x: -0.9, z: -1.55, y: 0, rotY: 180, rotZ: 0 },   // 臉貼板
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": 15 },   // 點頭 15°(下巴內收、前額朝板)
+    tube: { x: -0.9, z: -0.66, h: 1.62, pitch: 90, bodyTilt: 15, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100,機身斜 15° caudad,抬高至鼻根
     surfaceField: 0,   // 光野只畫在頭上,壁架/牆乾淨
     showCross: 0,      // 示意圖風格:只留柔光罩,不畫十字陰影
     ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
