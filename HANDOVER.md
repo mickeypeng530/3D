@@ -1,6 +1,6 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(Swimmer's 十字/光野根因修復,build sw14)
+> 最後更新:2026-06-15(十字穿透根因修復 + SID 滑桿 + 複製數值鈕,build sw15)
 
 ## 0. 接手起點(先讀這段)
 
@@ -9,7 +9,10 @@
 **sw14 修掉「左脖子/左臂出現十字」根因(sw13 上個 session 卡在這)**:兩個獨立問題,都不是座標系 bug——
   1. **左脖子十字** = 十字水平線是「過束軸的水平面」,橫切垂直脖子圓柱會繞一整圈;`facing` 門檻 `smoothstep(0,0.22)`(≈77°)太鬆,讓脖子兩側(法線朝球管 dot 接近 0)也被畫。→ 收緊到 `smoothstep(0.30,0.62)`(只畫真正正對球管的窄錐),側面/背側自動不畫,頸側暗帶抹寬「變暗」也一起解。
   2. **左臂十字** = 範圍閘原是**球形**,要 r=0.18 才蓋整段頸高度,同時把高舉經過頸側的手臂包進去。→ 改**各向異性橢球閘**:`paintGate {z, r, ry}`,`ry` 撐高涵蓋整段頸、`r` 收窄(0.12)只罩脖子排除手臂。uniform `uPaintRY`,UI 多一條「閘 垂直 ry」滑桿。`pgd` 改橢球正規化距離(內部 <1,門檻 1.0)。
-  occl 與此無關(被 `isBody` 豁免),所以在 occl 上找不到原因。**待使用者線上確認 sw14**。
+  occl 與此無關(被 `isBody` 豁免),所以在 occl 上找不到原因。
+
+**sw15 修掉「十字穿透到背面」根因(無範圍閘的 view,如 cspine-lateral)**:`facing` 舊版**包在 `gateVal` 內**,gate 關閉時整個 `mix(1, gateVal, 0)=1` → facing 失效 → 十字直接穿到脖子背面。cspine-lateral **沒有 paintGate**(swimmer 有),所以 swimmer 看不到穿透、cspine-lateral 看得到 —— 這就是「比較兩個 preset」的差異點。修法:把 `facing` 抽出來對**身體**一律生效(`onSurface ? 1 : smoothstep(0.30,0.62, normal·toFocal)`),範圍閘 `gateRegion` 獨立(只在 gate 開啟時限範圍)。承光面(牆/板/檯)不套 facing。**待使用者線上確認 sw15**。
+- **sw15 新增**:① **SID (cm) 滑桿**(X 光球管群第一條):沿光束方向把球管推遠/拉近到指定焦點→受像器距離,其他球管軸不動;靠 `lastSID`/`lastBeamDir`(applyAll 末端記錄)反推 `S.tube.x/h/z`。② **「📋 複製目前數值」鈕**:把 preset/SID/完整 S/非零關節/袖長 dump 成 JSON 複製到剪貼簿(clipboard 失敗則開 textarea),方便貼給 Claude 對比「這次調哪些、哪個最接近」。
 
 - **本機**:`python -m http.server 8765 --directory .`(或 preview launch config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
 - **線上**:push main → GitHub Pages `https://mickeypeng530.github.io/3D/`(約 1-2 分鐘部署)。repo `github.com/mickeypeng530/3D`。本機 git 在 `C:\Users\彭嗣翔\Claude_Work\3D`(獨立 repo,**非** Xray repo)。

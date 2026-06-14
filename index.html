@@ -82,6 +82,9 @@
     <button id="btnImport">⬆ 匯入設定</button>
     <input type="file" id="importFile" accept=".json" style="display:none">
   </div>
+  <div class="btnrow">
+    <button id="btnCopy">📋 複製目前數值</button>
+  </div>
 
   <div id="readout"></div>
 
@@ -192,13 +195,16 @@ function beamPaint(base, onSurface) {
   const dgate = positionWorld.sub(uPaintC);
   const pgd = vec3(dgate.x.div(uPaintR), dgate.y.div(uPaintRY), dgate.z.div(uPaintR)).length();   // 橢球正規化距離,內部 <1
   const toFocal = uFocalR.sub(posR).normalize();
-  // ⚠️ 十字的水平線是「過束軸的水平面」,會橫繞垂直的脖子一整圈;facing 太鬆(原 0.22≈77°)
-  //    就讓脖子兩側(dot 接近 0)也被畫 → 看起來「左右兩邊都有十字」、頸側暗帶抹寬變暗。
-  //    收緊到只畫真正正對球管的窄錐(dot>~0.6),側面/背側自動不畫。
-  const facing = smoothstep(float(0.30), float(0.62), normalWorld.dot(toFocal));
-  const gateVal = smoothstep(float(1.10), float(0.92), pgd).mul(facing);
-  const paintGate = mix(float(1), gateVal, uPaintGateOn);
-  const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
+  // facing:只畫「正對球管的身體正面」,避免十字/光野穿到背側(承光面=牆/板/檯不套用)。
+  //   ⚠️🔑 這條對「身體」一律生效——即使沒開範圍閘的 view(如 cspine-lateral)也要套,
+  //         否則十字會直接穿到脖子背面(「十字穿透」)。舊版 facing 包在 gateVal 內、
+  //         gate 關閉時整個被 mix 成 1 → facing 失效 → 才會穿透。
+  //   十字水平線是「過束軸的水平面」會橫繞垂直脖子一圈;門檻太鬆(舊 0.22≈77°)會讓側面也被畫。
+  //   收緊到 smoothstep(0.30,0.62)≈只留真正正對球管的窄錐。
+  const facing = onSurface ? float(1) : smoothstep(float(0.30), float(0.62), normalWorld.dot(toFocal));
+  // 範圍閘(高瘦橢球):只在 gate 開啟的 view 把著色限制到頸部一小段;關閉時 = 1(不限範圍)。
+  const gateRegion = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
+  const fm = fieldMask.mul(lit).mul(surfGate).mul(facing).mul(gateRegion);
   // 範圍閘開啟的 view(光野只在小區域)→ 加強亮度與十字對比,曲面上也看得清楚
   const bright = mix(float(0.5), float(1.0), uPaintGateOn);
   const crossDark = mix(float(0.45), float(0.28), uPaintGateOn);
@@ -541,6 +547,10 @@ function resetPose() { for (const p of ALL_PATHS) setJoint(p, 0); }
 /* ============================================================
    套用狀態
    ============================================================ */
+// SID 滑桿用:記住上次算出的焦點->受像器距離(m)與光束方向(房間座標),
+// 讓「SID」滑桿沿光束把球管推遠/拉近到指定距離(其他球管軸不動)
+let lastSID = 1.0;
+let lastBeamDir = new THREE.Vector3(0, 0, -1);
 function applyAll() {
   figure.position.set(S.fig.x, GL + S.fig.y, S.fig.z);
   // 旋轉必須下在 figure 本體(parent Group 會被變形 shader 忽略);大角度根旋轉會翻轉部分關節軸語意(HANDOVER)
@@ -605,6 +615,8 @@ function applyAll() {
     hitWhat = hit.what;
     L = Math.max(0.1, sid - 0.27);
     sidTxt = `${Math.round(sid * 100)} cm(至${hit.what})`;
+    lastSID = sid;
+    lastBeamDir.copy(dir);
   }
   // CR 角度顯示:相對偵檢板法線的偏角 +(視覺機身斜,給用假斜的 preset)
   //   立式板(壁架)法線=水平 → 偏角 = 90 - pitch;檯面法線=垂直 → 偏角 = pitch
@@ -645,7 +657,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw14</span><br>` +
+    `<span style="color:#7fd1ff">build sw15</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -957,6 +969,15 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
 
 {
   const g = addGroup("X 光球管", true);
+  // SID:沿光束方向把球管推遠/拉近到指定的「焦點→受像器」距離(位置X/焦點高等其他軸不動)
+  addSlider(g, "SID (cm)", 60, 200, 1, () => Math.round(lastSID * 100), v => {
+    const target = v / 100;
+    const focal = new THREE.Vector3(S.tube.x, GL + S.tube.h, S.tube.z);
+    focal.addScaledVector(lastBeamDir, lastSID - target);   // 沿光束移動:遠離受像器=SID 變大
+    S.tube.x = +focal.x.toFixed(4);
+    S.tube.h = +(focal.y - GL).toFixed(4);
+    S.tube.z = +focal.z.toFixed(4);
+  });
   addSlider(g, "位置 X (m)", -2.2, 2.4, 0.01, () => S.tube.x, v => S.tube.x = v);
   addSlider(g, "位置 Z (m)", -1.8, 2.1, 0.01, () => S.tube.z, v => S.tube.z = v);
   addSlider(g, "焦點高 (m)", 0.5, 2.2, 0.01, () => S.tube.h, v => S.tube.h = v);
@@ -1056,6 +1077,32 @@ document.getElementById("btnExport").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(a.href);
   toast("已匯出設定 JSON");
+});
+
+// 複製目前所有面板數值到剪貼簿(貼給 Claude 看「這次調了哪些、哪個最接近」)
+document.getElementById("btnCopy").addEventListener("click", async () => {
+  const joints = {};
+  for (const p of ALL_PATHS) { const v = getJoint(p); if (Math.abs(v) > 0.001) joints[p] = +v.toFixed(1); }
+  const dump = {
+    preset: presetSel.value,
+    SID: Math.round(lastSID * 100) + " cm",
+    S,
+    joints,
+    sleeve: { front: +uSleeveFront.value.toFixed(3), back: +uSleeveBack.value.toFixed(3) }
+  };
+  const txt = JSON.stringify(dump, null, 2);
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast("已複製目前數值到剪貼簿");
+  } catch {
+    // clipboard 失敗(非 https / 權限)→ 退而求其次:可見 textarea 讓使用者手動複製
+    const ta = document.createElement("textarea");
+    ta.value = txt;
+    ta.style.cssText = "position:fixed;left:8px;bottom:8px;width:360px;height:200px;z-index:9999";
+    document.body.appendChild(ta); ta.select();
+    toast("已開啟文字框,Ctrl+C 複製後可點它移除");
+    ta.addEventListener("click", () => ta.remove());
+  }
 });
 
 document.getElementById("btnImport").addEventListener("click", () => document.getElementById("importFile").click());
