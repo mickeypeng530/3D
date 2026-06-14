@@ -560,6 +560,16 @@ function applyAll() {
   const eul = new THREE.Euler(THREE.MathUtils.degToRad(S.tube.pitch), THREE.MathUtils.degToRad(S.tube.yaw), 0, "YXZ");
   const dir = new THREE.Vector3(0, -1, 0).applyEuler(eul);
   const focal = new THREE.Vector3(S.tube.x, GL + S.tube.h, S.tube.z);
+  // 陰影光源:beamShadow 開時對齊光束方向(水平),使板上陰影為水平投影
+  //   → 頭影在頭高、舉起的手影在手高(投到板頂以上),符合近水平 X 光束;否則用預設斜上光
+  if (S.beamShadow) {
+    sun.position.copy(focal).addScaledVector(dir, -8);
+    sun.target.position.copy(focal).addScaledVector(dir, 8);
+  } else {
+    sun.position.set(0, 12, 6);
+    sun.target.position.set(0, 0, 0);
+  }
+  sun.target.updateMatrixWorld();
   let L = 1.2, sidTxt = "-", hitWhat = "壁架板";
   const cands = [];
   if (Math.abs(dir.z) > 0.05) {
@@ -644,6 +654,7 @@ const PRESETS = {
     tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
     paintGate: { z: -1.42, r: 0.18, followBeam: 1 },   // 只在頸部 C7-T1 附近畫(中心跟著球管),排除舉起的手臂
+    beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
     cam: { px: 1.0, py: 1.6, pz: 0.28, tx: -0.9, ty: 1.35, tz: -1.42 }
@@ -759,6 +770,8 @@ function applyPreset(key) {
   S.occl = p.occl ? { ...p.occl } : null;
   S.surfaceField = (p.surfaceField === undefined) ? 1 : p.surfaceField;
   S.showCross = (p.showCross === undefined) ? 1 : p.showCross;
+  S.paintGate = p.paintGate ? { ...p.paintGate } : null;   // 範圍閘(只在頸部畫)
+  S.beamShadow = p.beamShadow || 0;                        // 陰影對齊光束
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
   applyAll();
