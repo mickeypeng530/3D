@@ -543,7 +543,7 @@ function applyAll() {
   const eul = new THREE.Euler(THREE.MathUtils.degToRad(S.tube.pitch), THREE.MathUtils.degToRad(S.tube.yaw), 0, "YXZ");
   const dir = new THREE.Vector3(0, -1, 0).applyEuler(eul);
   const focal = new THREE.Vector3(S.tube.x, GL + S.tube.h, S.tube.z);
-  let L = 1.2, sidTxt = "-";
+  let L = 1.2, sidTxt = "-", hitWhat = "壁架板";
   const cands = [];
   if (Math.abs(dir.z) > 0.05) {
     const t = (WS.faceZ - focal.z) / dir.z;
@@ -557,9 +557,14 @@ function applyAll() {
   if (cands.length) {
     const hit = cands.reduce((a, b) => (a.t < b.t ? a : b));
     const sid = hit.t;
+    hitWhat = hit.what;
     L = Math.max(0.1, sid - 0.27);
     sidTxt = `${Math.round(sid * 100)} cm(至${hit.what})`;
   }
+  // CR 角度顯示:相對偵檢板法線的偏角 +(視覺機身斜,給用假斜的 preset)
+  //   立式板(壁架)法線=水平 → 偏角 = 90 - pitch;檯面法線=垂直 → 偏角 = pitch
+  const perpDev = (hitWhat === "壁架板") ? (90 - S.tube.pitch) : S.tube.pitch;
+  const crDeg = Math.round(perpDev + (S.tube.bodyTilt || 0));
   beamGroup.visible = !!S.tube.beamOn;
   if (S.tube.beamOn) rebuildBeam(S.tube.fieldW, S.tube.fieldH, L);
 
@@ -587,7 +592,7 @@ function applyAll() {
 
   document.getElementById("readout").innerHTML =
     `SID:<b>${sidTxt}</b><br>` +
-    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${(S.tube.bodyTilt || 0)}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
+    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
 }
 
@@ -679,7 +684,7 @@ const PRESETS = {
     // 面向壁架 = rotY 180(臉朝 -z 後牆);球管在 +z 側水平射 -z(pitch 90)
     fig: { x: -0.9, z: -1.55, y: 0, rotY: 180, rotZ: 0 },   // 臉貼板
     joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": 15 },   // 點頭 15°(下巴內收、前額朝板)
-    tube: { x: -0.9, z: -0.66, h: 1.62, pitch: 90, bodyTilt: 15, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100,機身斜 15° caudad,抬高至鼻根
+    tube: { x: -0.9, z: -0.67, h: 1.76, pitch: 82, bodyTilt: 0, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100;球管抬高斜上方、光束真向腳側 8° caudad(pitch 82)射向鼻根
     surfaceField: 0,   // 光野只畫在頭上,壁架/牆乾淨
     showCross: 0,      // 示意圖風格:只留柔光罩,不畫十字陰影
     ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
