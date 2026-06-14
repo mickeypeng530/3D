@@ -1,10 +1,10 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-12(MVP 完成)
+> 最後更新:2026-06-14(Caldwell view + 示意圖風格化)
 
 ## 1. 這專案在做什麼
 
-放射擺位教學網站(`femhmedimage.org` 放射技術指引,本機 `..\Xray\`)需要大量擺位示意照。真人拍攝有隱私 / 尷尬部位 / 找不到模特兒的痛點(127 筆中 47 筆缺照,多為骨盆 / 髖 / 腹部 / 胸部 / 嬰兒)。本工具用 three.js + mannequin.js 在瀏覽器模擬 X 光攝影室與可擺姿勢人偶,截圖 PNG 給主站用。
+放射擺位教學網站(`femhmedimage.org` 放射技術指引,本機 `..\Xray\`)需要大量擺位示意照。真人拍攝有隱私 / 尷尬部位 / 找不到模特兒的痛點(127 筆中 47 筆缺照,多為骨盆 / 髖 / 腹部 / 胸部 / 嬰兒)。本工具用 three.js + disfigure(平滑人偶,MIT)在瀏覽器模擬 X 光攝影室與可擺姿勢人偶,截圖 PNG 給主站用。
 
 ## 2. 現在進度到哪
 
@@ -19,11 +19,13 @@
 - ✅ **使用者已定稿 2 個缺照 view**(2026-06-14):
   - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
   - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
+  - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 h=1.62(抬高使光野落鼻根)、機身斜 15° caudad、SID 100、光野 20×24。**示意圖風格**:`showCross:0`(不畫十字陰影,只留柔光罩)+ `surfaceField:0`(光野只在頭)+ 側面 profile 相機(臉朝壁架,對照 `..\Xray\caldwell view示意圖.png`)
 - ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
+- **2026-06-14 全域風格化**:① 膚色基底改暖色淺咖啡 `#c9b29a`(原 `#bfc4cb`,影響所有 view);② 病人服上衣下緣延伸到與短褲相接(torsoBand 下緣 0.70-0.80),腰部不再露膚 = 連續一件式;③ 新增 `uShowCross` uniform + per-preset `showCross` 旗標(0=只留柔光罩不畫十字),示意圖風格用
 
 ## 3. 架構速覽
 
-- 單檔 `index.html`(~600 行),無 build step;importmap 載 three@0.170 + mannequin-js@5(CDN)
+- 單檔 `index.html`(~870 行),無 build step;importmap 載 three@0.184(WebGPU)+ disfigure(CDN gh)。舊 mannequin.js + three 0.170 版見 git 歷史
 - 場景單位 = 公尺(啟動時量人偶 bbox 校正 `M` 比例;`mm(公尺)` 轉世界單位;地面 `GL = getGroundLevel()`)
 - 座標:後牆 z=-1.9(壁架板面 z=-1.78)、左牆 x=-2.2、攝影檯心 (0.75, 0.55)、檯面高 0.74
 - 球管:`tubeRig`(x/z + yaw)→ `tubeHead`(高度 + pitch;pitch 0=朝下、90=朝後牆)→ `beamGroup`(光束沿局部 -Y)
@@ -61,7 +63,7 @@
   - 內建 sun(DirectionalLight)放在 ROOMG 內隨房間轉,disfigure 的世界光壓到 0.35 → 臥位圖光影方向仍自然
   - 站立姿勢的足內旋 `leg.y ±12`、雙臂 `arm.z -72` 全部正常可用
 - **spotlight 光野強度:預設 30**(UI 有「光線」滑桿群可調主光/環境光/光野;120 在 SID 75cm 會過曝)
-- **病人服 = TSL colorNode 高度帶**(模型空間 y:短褲 0.68-1.06 全寬、背心 1.06-1.46 限 |x|<0.23 排除手臂)。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
+- **病人服 = TSL colorNode 高度帶**(模型空間 y,disfigure rest=T-pose):上衣 torsoBand y 0.70-1.60(下緣已降到接短褲)× sideIn |x|<0.34 × 圓領口挖空;短袖 sleeve(armX |x| 0.26-0.54、armY≈1.46、armZ |z|<0.12);短褲 y 0.66-1.08 全寬;點點花紋 sin 網格。gown 色 `#7791ba`、膚色 `#c9b29a`。disfigure 的 `dress()` 在此版是 silent no-op 別浪費時間
 - 🔑 **雷射/十字/光野「畫在皮膚上」(TSL,2026-06-13)**:同一個 colorNode 接著做三層 — ① 光野亮區:positionWorld 經 `uBeamInv`(beamGroup.matrixWorld 逆矩陣 uniform)轉光束局部座標,錐內(線性放大的 field 範圍)加暖色;② 十字:光束局部 |x|或|z| < 3.5mm 變暗;③ 雷射:`|positionWorld.y - uLaserY| < 4.2mm` 且 `normalWorld.z > -0.1`(只畫面向雷射源的表面)染紅。**任何視角都貼著身體輪廓**,完全取代會浮空的貼片(crossSkin/laserSkin 已刪),十字也不再需要逐 preset 手動標位。uniform 在 applyAll 末端更新(記得 `beamGroup.updateWorldMatrix` 後再 invert)。牆上雷射線仍是 L/R 兩段幾何(平面上貼片不會穿幫),gap 機制保留
 - **光野視覺規格(對照 Skull AP 實拍)**:柔邊「矩形」暖光 + 寬 ~15mm 軟邊十字陰影。承光面(牆/板/檯/偵檢板)用 `beamLambert()`(MeshLambertNodeMaterial + 共用 beamPaint TSL 鏈)。**spotlight 預設 0**(只當氛圍光,由滑桿開)。⚠️ 半透明光錐 DoubleSide 多層疊加會變白盤 → FrontSide + opacity 0.07
 - **標準視角按鈕**(斜45/正面/側面/正上)方向用房間座標經 ROOMG 轉換,臥位也正確;正上方刻意偏斜 (0.45,1,0.45) 避開球管;臥位時「側面」≈ 從腳底看(房間座標語意),要更名再說
