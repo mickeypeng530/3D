@@ -131,6 +131,7 @@ figure.frustumCulled = false;   // GPU 變形不更新 bounds
 // 人偶表面著色(TSL colorNode):衣服 + 雷射線 + 光野十字「畫在皮膚上」
 // 任何視角都貼著身體輪廓(真正在表面),取代會浮空的貼片做法
 // ============================================================
+const uHemBias = uniform(0.35);   // 袖口 hem 反斜補正係數(前側 +z 提早截斷),調試用
 const uBeamInv = uniform(new THREE.Matrix4());   // 世界 -> 光束局部(束軸 -Y)
 const uRoomInv = uniform(new THREE.Matrix4());   // 世界 -> 房間座標
 const uFocalR = uniform(new THREE.Vector3(0, 2, 0));   // 焦點(房間座標)
@@ -201,7 +202,9 @@ function beamPaint(base, onSurface) {
   const neckline = openY.mul(openZ).mul(openX).oneMinus();
   let top = torsoBand.mul(sideIn).mul(neckline);
   // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
-  const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.37), float(0.33), abs(x)));   // 外緣收到 proximal humerus(上臂近端 ~1/3),不再延到手肘
+  // 外緣收到 proximal humerus;hem 反向預斜補正 disfigure 彎曲:前側(+z)被拉長 → +z 側提早截斷(|x|+z*k)
+  const armHemV = abs(x).add(z.mul(uHemBias));
+  const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(float(0.37), float(0.33), armHemV));
   // 袖子橫截面用「離手臂中心線的徑向距離」(rest 中心≈y1.46,z0),避免水平 y 帶斜切下垂手臂造成斜向 hem
   const dy = y.sub(1.46), armR2 = dy.mul(dy).add(z.mul(z));
   const armTube = smoothstep(float(0.016), float(0.008), armR2);   // 半徑 ~0.09→0.13 m 的圓管(平方比較)
@@ -1002,7 +1005,7 @@ applyPreset("cspine-lateral");
 presetSel.value = "cspine-lateral";
 window.__setStatus("");
 
-window.__sim = { THREE, S, PRESETS, figure, scene, camera, renderer, controls, applyAll, applyPreset, setJoint, getJoint, resetPose, syncSliders, renderOnce, ROOMG, camS, applyCamAngles, readCamAngles, setView };
+window.__sim = { THREE, S, PRESETS, figure, scene, camera, renderer, controls, applyAll, applyPreset, setJoint, getJoint, resetPose, syncSliders, renderOnce, ROOMG, camS, applyCamAngles, readCamAngles, setView, uHemBias };
 </script>
 </body>
 </html>
