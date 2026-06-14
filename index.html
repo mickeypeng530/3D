@@ -184,9 +184,11 @@ function beamPaint(base, onSurface) {
 
   // 承光面(檯/牆/板)可整體關閉光野(uSurfaceField=0 -> 光野只畫在人偶身上)
   const surfGate = onSurface ? uSurfaceField : float(1);
-  // 範圍閘:只在 uPaintC 小球內著色(把光野/十字限制在頸部一小塊,半徑夠小才不碰手臂)
+  // 範圍閘:小球內 + 只在「朝向球管的正面」著色(背面=左手/左脖子本來就照不到,不該有十字)
   const pgd = positionWorld.sub(uPaintC).length();
-  const gateVal = smoothstep(uPaintR.add(0.04), uPaintR.sub(0.02), pgd);
+  const toFocal = uFocalR.sub(posR).normalize();
+  const facing = smoothstep(float(0.0), float(0.35), normalWorld.dot(toFocal));   // dot>0 才是面朝球管;背面=0
+  const gateVal = smoothstep(uPaintR.add(0.04), uPaintR.sub(0.02), pgd).mul(facing);
   const paintGate = mix(float(1), gateVal, uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
   // 光野:乘法提亮(保留布料/皮膚色相,不被白光沖淡)+ 極淡暖色調
