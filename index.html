@@ -436,6 +436,10 @@ const spotTarget = new THREE.Object3D();
 beamGroup.add(spotTarget);
 spot.target = spotTarget;
 
+// 球管整組不投射陰影:directional light 在無限遠,擺不到球管出口,球管會擋光投出自身陰影
+// (尤其 beamShadow 水平光時很明顯)。球管陰影本來就不重要 → 直接關掉,只留人偶投影
+tubeRig.traverse(o => { if (o.isMesh) o.castShadow = false; });
+
 function rebuildBeam(fieldW, fieldH, len) {
   const a = 0.02, W = fieldW / 2, H = fieldH / 2, L = len;
   const v = [
