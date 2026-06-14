@@ -187,7 +187,8 @@ function beamPaint(base, onSurface) {
   // 範圍閘:小球內 + 只在「朝向球管的正面」著色(背面=左手/左脖子本來就照不到,不該有十字)
   const pgd = positionWorld.sub(uPaintC).length();
   const toFocal = uFocalR.sub(posR).normalize();
-  const facing = smoothstep(float(0.0), float(0.35), normalWorld.dot(toFocal));   // dot>0 才是面朝球管;背面=0
+  // 只擋「真正朝板(背側,dot≈-1,如左手/左脖子)」的面;放行朝側/朝後(耳後 dot≈0)的面
+  const facing = smoothstep(float(-0.4), float(-0.1), normalWorld.dot(toFocal));
   const gateVal = smoothstep(uPaintR.add(0.04), uPaintR.sub(0.02), pgd).mul(facing);
   const paintGate = mix(float(1), gateVal, uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
