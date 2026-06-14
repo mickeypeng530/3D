@@ -1,16 +1,21 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-14(Swimmer's view + 皮膚十字/光野除錯,build sw13)
+> 最後更新:2026-06-15(Swimmer's 十字/光野根因修復,build sw14)
 
 ## 0. 接手起點(先讀這段)
 
-**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚上十字+光野」微調**,線上版 build 號 `sw13`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現)。
+**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚上十字+光野」微調**,線上版 build 號 `sw14`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現)。
+
+**sw14 修掉「左脖子/左臂出現十字」根因(sw13 上個 session 卡在這)**:兩個獨立問題,都不是座標系 bug——
+  1. **左脖子十字** = 十字水平線是「過束軸的水平面」,橫切垂直脖子圓柱會繞一整圈;`facing` 門檻 `smoothstep(0,0.22)`(≈77°)太鬆,讓脖子兩側(法線朝球管 dot 接近 0)也被畫。→ 收緊到 `smoothstep(0.30,0.62)`(只畫真正正對球管的窄錐),側面/背側自動不畫,頸側暗帶抹寬「變暗」也一起解。
+  2. **左臂十字** = 範圍閘原是**球形**,要 r=0.18 才蓋整段頸高度,同時把高舉經過頸側的手臂包進去。→ 改**各向異性橢球閘**:`paintGate {z, r, ry}`,`ry` 撐高涵蓋整段頸、`r` 收窄(0.12)只罩脖子排除手臂。uniform `uPaintRY`,UI 多一條「閘 垂直 ry」滑桿。`pgd` 改橢球正規化距離(內部 <1,門檻 1.0)。
+  occl 與此無關(被 `isBody` 豁免),所以在 occl 上找不到原因。**待使用者線上確認 sw14**。
 
 - **本機**:`python -m http.server 8765 --directory .`(或 preview launch config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
 - **線上**:push main → GitHub Pages `https://mickeypeng530.github.io/3D/`(約 1-2 分鐘部署)。repo `github.com/mickeypeng530/3D`。本機 git 在 `C:\Users\彭嗣翔\Claude_Work\3D`(獨立 repo,**非** Xray repo)。
 - **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
 - **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
-- **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw13 用「facing 嚴格 dot>0 + 範圍閘 r=0.18」解掉,**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
+- **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw14 用「facing 收緊到 smoothstep(0.30,0.62) + 各向異性橢球閘(r 窄/ry 高)」解掉(根因見上方 §0 sw14 段),**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
 - **大方向待辦**:`..\Xray\positions.json` 還有 47 筆缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、stenvers、arcelin、caldwells、waters、(swimmers 待確認)。
 
 
@@ -32,7 +37,7 @@
   - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
   - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
   - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 **h=1.76 真斜 8° caudad(pitch 82)**、SID 100、光野 20×24。**示意圖風格**:`showCross:0` + `surfaceField:0` + 側面 profile 相機(對照 `..\Xray\caldwell view示意圖.png`)。CR 真斜(非假機身斜),想要完整 SOP 15° 把 pitch 調 75
-  - **cspine-swimmers**(立位側位,2026-06-14):rotY 90 側位(矢狀面平行板)、**近板側(左)手臂 l_arm.z 100 高舉過頭、遠側 r_arm.z -72 下壓**(分開兩肩露 C7-T1)、head.x -12 下顎抬、fig z=-1.42、球管 z=-0.64 h=1.44 pitch 90 對 C7-T1、**SID 102**、光野 16×30 窄高。Twining 法。**這個 view 要十字+光野框畫在皮膚上**(showCross 1、surfaceField 0 板上不畫)。⚠️ 光野沿光束打到所有表面(手、板)→ 用 `paintGate {x,y,z,r}` 小球範圍閘,只在頸 C7-T1 一小塊畫、半徑夠小(0.11)排除手臂。**正確平衡(build sw13)**:facing **嚴格只畫朝球管正面**(`smoothstep(0.0,0.22, normalWorld·toFocal)`,dot>0)→ 左脖子/左臂(背側 dot<0)自動不畫。範圍閘**要夠大(r=0.18)涵蓋整段頸**,否則上頸跑出小球→變暗(被誤認為「脖子有遮罩」,實為 occl 無關、是 gate 太小)。十字平面(posB.x/z=0)會同時切過頸前後兩面,**靠 facing 擋掉背面**那一份,不是靠透明。occl 經實測與此無關(開關相同)。**光野/十字位置由「球管」決定(beam 投影),不是遮罩**——遮罩 followBeam 跟著 tube.x/h,要移光野去耳後是調「X光球管」的 焦點高/位置X;「光野範圍閘」滑桿只調 深度Z/範圍r。(曾把遮罩做成獨立位置滑桿→移遮罩光野不動、誤導,已改回 followBeam)光束 x 要對準頸部(=fig.x)否則只擦到邊緣很淡。**陰影**:預設 sun 從上方斜下打,高的手影會落到頭高度(錯)→ 用 `beamShadow:1` 讓 sun 對齊光束方向(水平),頭影在頭高、手影投到板頂以上。directional light 在無限遠擺不到球管出口,球管會擋光投自身陰影 → **球管整組 `tubeRig.traverse castShadow=false`**(球管陰影不重要),只留人偶投影。⚠️ **applyPreset 只複製白名單欄位**(fig/tube/ws/det/room/occl/surfaceField/showCross/paintGate/beamShadow)——加新的 per-preset 自訂欄位一定要在 applyPreset 補一行複製到 S,否則靠殘留狀態僥倖、fresh load 會失效。⚠️ 截圖時 embedded preview canvas 會變 1px → 先 `renderer.setSize(960,720,false)+camera.aspect` 再拍(真實瀏覽器正常)
+  - **cspine-swimmers**(立位側位,2026-06-14):rotY 90 側位(矢狀面平行板)、**近板側(左)手臂 l_arm.z 100 高舉過頭、遠側 r_arm.z -72 下壓**(分開兩肩露 C7-T1)、head.x -12 下顎抬、fig z=-1.42、球管 z=-0.64 h=1.44 pitch 90 對 C7-T1、**SID 102**、光野 16×30 窄高。Twining 法。**這個 view 要十字+光野框畫在皮膚上**(showCross 1、surfaceField 0 板上不畫)。⚠️ 光野沿光束打到所有表面(手、板)→ 用 `paintGate {z, r, ry}` 範圍閘只在頸 C7-T1 畫。**正解(build sw14,根因見 §0)**:① facing 收緊到 `smoothstep(0.30,0.62, normalWorld·toFocal)`——十字水平線是過束軸的水平面、會橫繞垂直脖子一整圈,facing 太鬆(舊 0.22≈77°)就讓頸側也被畫成「左右都有十字」+頸側暗帶抹寬變暗;收緊只留正對球管窄錐。② 範圍閘改**各向異性橢球**(不再球形):`r` 收窄(0.12)只罩脖子粗細、`ry` 撐高(0.24)涵蓋整段頸——舊球形要 r 大才蓋頸高,卻把高舉經過頸側的手臂一起包進去 → 手臂出現十字。`pgd` 用橢球正規化距離(內部 <1)。十字平面(posB.x/z=0)會同時切過頸前後兩面,**靠 facing 擋掉背面**那一份,不是靠透明。occl 經實測與此無關(開關相同)。**光野/十字位置由「球管」決定(beam 投影),不是遮罩**——遮罩 followBeam 跟著 tube.x/h,要移光野去耳後是調「X光球管」的 焦點高/位置X;「光野範圍閘」滑桿只調 深度Z/範圍r。(曾把遮罩做成獨立位置滑桿→移遮罩光野不動、誤導,已改回 followBeam)光束 x 要對準頸部(=fig.x)否則只擦到邊緣很淡。**陰影**:預設 sun 從上方斜下打,高的手影會落到頭高度(錯)→ 用 `beamShadow:1` 讓 sun 對齊光束方向(水平),頭影在頭高、手影投到板頂以上。directional light 在無限遠擺不到球管出口,球管會擋光投自身陰影 → **球管整組 `tubeRig.traverse castShadow=false`**(球管陰影不重要),只留人偶投影。⚠️ **applyPreset 只複製白名單欄位**(fig/tube/ws/det/room/occl/surfaceField/showCross/paintGate/beamShadow)——加新的 per-preset 自訂欄位一定要在 applyPreset 補一行複製到 S,否則靠殘留狀態僥倖、fresh load 會失效。⚠️ 截圖時 embedded preview canvas 會變 1px → 先 `renderer.setSize(960,720,false)+camera.aspect` 再拍(真實瀏覽器正常)
   - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**軀幹前傾分散 chest.x 6 + waist.x 9**(臉到板而胸口不陷,見下「臉貼板」坑)+ **頭微後仰 head.x -4**(下巴上抬、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.52、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片(使用者於工具內調定:胸彎6/腰彎9/點頭-4)
 - ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
 - **2026-06-14 全域風格化**:① 膚色基底改暖色淺咖啡 `#c9b29a`(原 `#bfc4cb`,影響所有 view);② 病人服上衣下緣延伸到與短褲相接(torsoBand 下緣 0.70-0.80),腰部不再露膚 = 連續一件式;③ 新增 `uShowCross` uniform + per-preset `showCross` 旗標(0=只留柔光罩不畫十字),示意圖風格用

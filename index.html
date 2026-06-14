@@ -102,7 +102,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec4, smoothstep, max, sin, floor as tslFloor } from "three/tsl";
+import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec3, vec4, smoothstep, max, sin, floor as tslFloor } from "three/tsl";
 import { World, Man, scene, camera, renderer, controls, ground, light, cameraLight } from "disfigure";
 
 /* ============================================================
@@ -147,7 +147,8 @@ const uCrossOn = uniform(1);
 const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示意圖風格)
 const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
-const uPaintR = uniform(0.15);
+const uPaintR = uniform(0.15);    // 閘水平半徑(x/z):窄→排除舉起的手臂
+const uPaintRY = uniform(0.30);   // 閘垂直半徑(y):高→涵蓋整段頸,不必把水平半徑撐大
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
 // 套用在任何材質的 colorNode 上(人偶皮膚 + 牆/板/檯面),取代圓形 spotlight 光池
 function beamPaint(base, onSurface) {
@@ -184,12 +185,18 @@ function beamPaint(base, onSurface) {
 
   // 承光面(檯/牆/板)可整體關閉光野(uSurfaceField=0 -> 光野只畫在人偶身上)
   const surfGate = onSurface ? uSurfaceField : float(1);
-  // 範圍閘:小球內 + 只在「朝向球管的正面」著色(背面=左手/左脖子本來就照不到,不該有十字)
-  const pgd = positionWorld.sub(uPaintC).length();
+  // 範圍閘:高瘦橢球內(垂直 ry 涵蓋整段頸、水平 r 窄到排除舉起的手臂)
+  //   + 只在「正對球管」的窄錐面著色。
+  // ⚠️ 之前用「球形閘」:要 r 夠大才蓋整段頸,但同時把經過頸側的手臂也包進去 → 手臂出現十字。
+  //    改各向異性橢球(y 撐高、x/z 收窄)即可只罩脖子。
+  const dgate = positionWorld.sub(uPaintC);
+  const pgd = vec3(dgate.x.div(uPaintR), dgate.y.div(uPaintRY), dgate.z.div(uPaintR)).length();   // 橢球正規化距離,內部 <1
   const toFocal = uFocalR.sub(posR).normalize();
-  // 只在「朝球管正面」(dot>0)畫:左脖子/左臂(背側 dot<0)自動不畫。耳後的朝球管面 dot 仍>0 會保留
-  const facing = smoothstep(float(0.0), float(0.22), normalWorld.dot(toFocal));
-  const gateVal = smoothstep(uPaintR.add(0.04), uPaintR.sub(0.02), pgd).mul(facing);
+  // ⚠️ 十字的水平線是「過束軸的水平面」,會橫繞垂直的脖子一整圈;facing 太鬆(原 0.22≈77°)
+  //    就讓脖子兩側(dot 接近 0)也被畫 → 看起來「左右兩邊都有十字」、頸側暗帶抹寬變暗。
+  //    收緊到只畫真正正對球管的窄錐(dot>~0.6),側面/背側自動不畫。
+  const facing = smoothstep(float(0.30), float(0.62), normalWorld.dot(toFocal));
+  const gateVal = smoothstep(float(1.10), float(0.92), pgd).mul(facing);
   const paintGate = mix(float(1), gateVal, uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
   // 範圍閘開啟的 view(光野只在小區域)→ 加強亮度與十字對比,曲面上也看得清楚
@@ -618,6 +625,7 @@ function applyAll() {
     uPaintGateOn.value = 1;
     uPaintC.value.set(S.tube.x, GL + S.tube.h, pg.z);
     uPaintR.value = pg.r;
+    uPaintRY.value = (pg.ry === undefined) ? pg.r * 2.4 : pg.ry;
   } else {
     uPaintGateOn.value = 0;
   }
@@ -637,7 +645,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw13</span><br>` +
+    `<span style="color:#7fd1ff">build sw14</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -664,7 +672,7 @@ const PRESETS = {
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
     tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
-    paintGate: { z: -1.42, r: 0.18 },   // 範圍閘中心跟著球管(x/高),涵蓋整段頸但不到舉起的手;facing 排背側
+    paintGate: { z: -1.42, r: 0.12, ry: 0.24 },   // 高瘦橢球閘:ry 撐高涵蓋整段頸,r 收窄排除舉起的手臂;facing 收緊排側面/背側
     beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
@@ -921,7 +929,8 @@ function readCamAngles() {
   const pgSet = (k) => (v) => { if (S.paintGate) S.paintGate[k] = v; };
   // 中心跟球管 x/高(用「X 光球管」的 焦點高/位置X 瞄位置);這裡只調深度與範圍大小
   addSlider(g, "閘 深度 Z (m)", -1.9, 2.1, 0.01, pgGet("z", -1.42), pgSet("z"));
-  addSlider(g, "閘 範圍 r (m)", 0.05, 0.4, 0.005, pgGet("r", 0.12), pgSet("r"));
+  addSlider(g, "閘 水平 r (m)", 0.05, 0.4, 0.005, pgGet("r", 0.12), pgSet("r"));
+  addSlider(g, "閘 垂直 ry (m)", 0.05, 0.6, 0.005, pgGet("ry", 0.24), pgSet("ry"));
 }
 
 {
