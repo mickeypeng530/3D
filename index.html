@@ -150,6 +150,7 @@ const uCrossOn = uniform(1);
 const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示意圖風格)
 const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
+const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
 const uPaintR = uniform(0.15);    // 閘水平半徑(x/z):窄→排除舉起的手臂
 const uPaintRY = uniform(0.30);   // 閘垂直半徑(y):高→涵蓋整段頸,不必把水平半徑撐大
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
@@ -212,6 +213,8 @@ function beamPaint(base, onSurface) {
   let c = base.mul(fm.mul(bright).add(1));
   c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
   c = mix(c, c.mul(crossDark), fm.mul(crossBand).mul(uShowCross));   // 十字陰影帶(可關)
+  // 診斷:?dbg=1 時把「最終著色遮罩 fm」染紅,一眼看出 paint 落在哪些表面(穿透?手臂?)
+  c = mix(c, color("#ff2030"), fm.mul(uDbgPaint));
   return c;
 }
 
@@ -657,7 +660,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw15</span><br>` +
+    `<span style="color:#7fd1ff">build sw16</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -684,7 +687,7 @@ const PRESETS = {
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
     tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
-    paintGate: { z: -1.42, r: 0.12, ry: 0.24 },   // 高瘦橢球閘:ry 撐高涵蓋整段頸,r 收窄排除舉起的手臂;facing 收緊排側面/背側
+    paintGate: { z: -1.38, r: 0.09, ry: 0.10 },   // 橢球閘:中心偏球管側(z 偏 +)、r 窄排掉舉起的手臂(在 -z/板側)、ry 壓低不畫到耳/下顎;facing 已排背側
     beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
@@ -1128,8 +1131,24 @@ document.getElementById("importFile").addEventListener("change", e => {
 /* ============================================================
    啟動
    ============================================================ */
-applyPreset("cspine-lateral");
-presetSel.value = "cspine-lateral";
+{
+  // 診斷/分享用 URL 參數:?p=preset&az=&el=&dist=&tx=&ty=&tz=(臥位 tx/ty/tz 為房間座標,沿用 preset 焦點)
+  const q = new URLSearchParams(location.search);
+  const wantP = q.get("p");
+  const startP = (wantP && PRESETS[wantP]) ? wantP : "cspine-lateral";
+  applyPreset(startP);
+  presetSel.value = startP;
+  if (q.get("hud") === "0") document.getElementById("panel").style.display = "none";
+  if (q.get("dbg") === "1") uDbgPaint.value = 1;
+  const num = (k) => q.has(k) ? +q.get(k) : null;
+  const az = num("az"), el = num("el"), dist = num("dist");
+  if (az !== null || el !== null || dist !== null) {
+    if (az !== null) camS.az = az;
+    if (el !== null) camS.el = el;
+    if (dist !== null) camS.dist = dist;
+    applyCamAngles(); syncSliders();
+  }
+}
 window.__setStatus("");
 
 window.__sim = { THREE, S, PRESETS, figure, scene, camera, renderer, controls, applyAll, applyPreset, setJoint, getJoint, resetPose, syncSliders, renderOnce, ROOMG, camS, applyCamAngles, readCamAngles, setView, uSleeveFront, uSleeveBack };

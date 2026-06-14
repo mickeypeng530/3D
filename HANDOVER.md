@@ -1,6 +1,14 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(十字穿透根因修復 + SID 滑桿 + 複製數值鈕,build sw15)
+> 最後更新:2026-06-15(headless 截圖管道打通 + 十字穿透/手臂著色實機修正,build sw16)
+
+## 🆕 重大:headless Chrome 可直接截 WebGPU 圖(接手者必讀)
+**以前**只能靠使用者線上回報、瞎猜。**現在**本機 headless Chrome 能直接 render WebGPU 出圖,Claude 可自己看畫面除錯。
+- 開 server:`python -m http.server 8765`(背景)。
+- 截圖一張:
+  `"C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --enable-unsafe-webgpu --enable-features=Vulkan --window-size=760,760 --virtual-time-budget=14000 "--screenshot=<絕對路徑>.png" "http://localhost:8765/index.html?p=cspine-swimmers&hud=0&az=50&el=6&dist=1.5"`
+- **⚠️ WebGPU 首幀偶爾全白(~3KB)**:用 loop 重試到檔案 >40KB 為止(通常 1-2 次)。`--screenshot` 路徑要 **Windows 絕對路徑**(反斜線)。
+- **新增 URL 診斷參數**(startup 解析):`p=<preset>`、`hud=0`(隱藏面板)、`az/el/dist`(球面相機,繞 controls.target)、`dbg=1`(把著色遮罩 fm 染紅,一眼看出 paint 落在哪些表面——找穿透/手臂著色神器)。這些參數對正式站無害,保留。
 
 ## 0. 接手起點(先讀這段)
 
@@ -12,6 +20,7 @@
   occl 與此無關(被 `isBody` 豁免),所以在 occl 上找不到原因。
 
 **sw15 修掉「十字穿透到背面」根因(無範圍閘的 view,如 cspine-lateral)**:`facing` 舊版**包在 `gateVal` 內**,gate 關閉時整個 `mix(1, gateVal, 0)=1` → facing 失效 → 十字直接穿到脖子背面。cspine-lateral **沒有 paintGate**(swimmer 有),所以 swimmer 看不到穿透、cspine-lateral 看得到 —— 這就是「比較兩個 preset」的差異點。修法:把 `facing` 抽出來對**身體**一律生效(`onSurface ? 1 : smoothstep(0.30,0.62, normal·toFocal)`),範圍閘 `gateRegion` 獨立(只在 gate 開啟時限範圍)。承光面(牆/板/檯)不套 facing。**待使用者線上確認 sw15**。
+**sw16 實機修掉殘留「手臂/耳」著色(用 headless dbg=1 紅圖看出來)**:sw15 的 facing 已把**背側**清乾淨(實測 prone-90 背面無紅),但 swimmer 的**舉起手臂前緣**與**耳/下顎**仍落在範圍閘橢球內被畫到(手臂前緣朝球管→facing 擋不掉,只能靠閘位置)。修法:閘收更小並偏球管側 `paintGate {z:-1.38, r:0.09, ry:0.10}`(中心 z 偏 +z=球管側→排掉在 -z/板側的手臂;ry 壓低→不畫到耳/下顎)。實測手臂/耳乾淨、頸前十字保留。cspine-lateral(無閘)實測也正確:facing 讓著色只在正面、背側乾淨(sw15 反而修好了它原本會穿透的背側,**沒有把 swimmer 的錯誤套過去**)。
 - **sw15 新增**:① **SID (cm) 滑桿**(X 光球管群第一條):沿光束方向把球管推遠/拉近到指定焦點→受像器距離,其他球管軸不動;靠 `lastSID`/`lastBeamDir`(applyAll 末端記錄)反推 `S.tube.x/h/z`。② **「📋 複製目前數值」鈕**:把 preset/SID/完整 S/非零關節/袖長 dump 成 JSON 複製到剪貼簿(clipboard 失敗則開 textarea),方便貼給 Claude 對比「這次調哪些、哪個最接近」。
 
 - **本機**:`python -m http.server 8765 --directory .`(或 preview launch config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
