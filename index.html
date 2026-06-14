@@ -639,7 +639,7 @@ const PRESETS = {
     label: "頸椎泳姿位 Swimmer's(立位側位)",
     // 本院 SOP:立姿側位,正中矢狀面平行板;近板側手臂高舉過頭、遠側下壓貼身(分開兩肩露 C7-T1);
     // 下顎抬起;CR 水平對 C7-T1(約 T1 棘突);SID 102。可向尾 3-5°
-    fig: { x: -0.9, z: -1.42, y: 0, rotY: 90, rotZ: 0 },   // 側位,右肩近板(-z)
+    fig: { x: -0.85, z: -1.42, y: 0, rotY: 90, rotZ: 0 },   // 側位(使用者調 x-0.85 位置才對)
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
     tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
