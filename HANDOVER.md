@@ -5,9 +5,9 @@
 ## sw19:swimmer 光影對齊 `Xray/Swimer view示範.jpeg`
 **參考圖鐵則**:X 光板(bucky)上**只有身體的柔影**,沒有亮光野矩形、沒有投影十字;光野+十字**只畫在皮膚上**。
 - **承光面分流**(beamPaint 用 `if(onSurface)` 編譯期分支):
-  - 承光面(板/牆/檯):`shadow = fieldMask·(1-lit)·surfGate`(光野範圍內被身體擋住處)→ `base·(1 - shadow·uPlateShadow)`,**只投柔影**。`uPlateShadow` 預設 0.5。
+  - 承光面(板/牆/檯,sw20):一塊柔和**光野**(`fieldLit·uPlateField` 微亮 + 微暖)+ 身體**柔影**(`shadow·uPlateShadow`),**但不畫投影十字**。`fieldLit = fieldMask·lit·surfGate`、`shadow = fieldMask·(1-lit)·surfGate`。預設 `uPlateField 0.35`、`uPlateShadow 0.5`;UI「板上光野」「板上影濃」可調(0 = 關)。
   - 身體皮膚:光野亮區 + 暖調 + 十字(`bodyGate` 橢球只罩後頸/肩、排除舉起手臂)。
-  - sw18 曾誤把光野矩形+十字投到板上(surfaceField:1 + 承光面跑全套著色)→ 使用者打槍,sw19 改成上面分流。`surfaceField` 旗標現在對 swimmer 已無作用(承光面一律只投影);要關板影調 `uPlateShadow`。
+  - 演進:sw18 誤把**亮光野矩形+投影十字**全投到板上 → 打槍;sw19 改「板上只剩柔影」→ 使用者說「範例圖影子後面要有一塊光野」;sw20 = 板上「柔光野+柔影、無十字」。`surfaceField` 旗標仍是承光面著色總開關(swimmer=1)。
 - **肩部光**:`paintGate {z:-1.37, r:0.13, ry:0.20}`(涵蓋後頸+肩),`r` 窄到排除手臂(在 -z 板側)。
 - **十字線寬可調**:`uCrossW`(半寬 m,預設 0.011);UI「十字線寬 (mm)」1-30mm。
 - 使用者微調值:`tube {x:-0.94, h:1.5, pitch:88, fieldW:0.16, fieldH:0.38}`、SID 102。十字耳後位置/肩範圍仍可滑桿微調。
