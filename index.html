@@ -192,10 +192,13 @@ function beamPaint(base, onSurface) {
   const gateVal = smoothstep(uPaintR.add(0.04), uPaintR.sub(0.02), pgd).mul(facing);
   const paintGate = mix(float(1), gateVal, uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
+  // 範圍閘開啟的 view(光野只在小區域)→ 加強亮度與十字對比,曲面上也看得清楚
+  const bright = mix(float(0.5), float(1.0), uPaintGateOn);
+  const crossDark = mix(float(0.45), float(0.28), uPaintGateOn);
   // 光野:乘法提亮(保留布料/皮膚色相,不被白光沖淡)+ 極淡暖色調
-  let c = base.mul(fm.mul(0.5).add(1));                  // 最多 1.5x 亮度
+  let c = base.mul(fm.mul(bright).add(1));
   c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
-  c = mix(c, c.mul(0.45), fm.mul(crossBand).mul(uShowCross));   // 十字陰影帶(可關)
+  c = mix(c, c.mul(crossDark), fm.mul(crossBand).mul(uShowCross));   // 十字陰影帶(可關)
   return c;
 }
 
@@ -634,6 +637,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
+    `<span style="color:#7fd1ff">build sw12</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
