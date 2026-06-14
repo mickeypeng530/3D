@@ -1,6 +1,18 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-14(Caldwell view + 示意圖風格化)
+> 最後更新:2026-06-14(Swimmer's view + 皮膚十字/光野除錯,build sw13)
+
+## 0. 接手起點(先讀這段)
+
+**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚上十字+光野」微調**,線上版 build 號 `sw13`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現)。
+
+- **本機**:`python -m http.server 8765 --directory .`(或 preview launch config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
+- **線上**:push main → GitHub Pages `https://mickeypeng530.github.io/3D/`(約 1-2 分鐘部署)。repo `github.com/mickeypeng530/3D`。本機 git 在 `C:\Users\彭嗣翔\Claude_Work\3D`(獨立 repo,**非** Xray repo)。
+- **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
+- **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
+- **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw13 用「facing 嚴格 dot>0 + 範圍閘 r=0.18」解掉,**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
+- **大方向待辦**:`..\Xray\positions.json` 還有 47 筆缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、stenvers、arcelin、caldwells、waters、(swimmers 待確認)。
+
 
 ## 1. 這專案在做什麼
 
@@ -9,8 +21,8 @@
 ## 2. 現在進度到哪
 
 - ✅ MVP 完成:攝影室、立式攝影架(板高可調)、攝影檯 + 檯面偵檢板、天吊球管(x/z/高/俯仰/旋轉)、光野錐 + 十字 + spotlight 投影、定位雷射線、SID 即時讀數
-- ✅ 人偶:mannequin.js Female,50 個滑桿(全身位置 + 頭頸/軀幹/四肢關節)
-- ✅ 場景 preset 2 個:cspine-lateral(立位,SID 180)、ankle-ap(檯上坐姿,SID 100)
+- ✅ 人偶:disfigure **Man**(身高 1.73),全身位置 + 頭頸/軀幹/四肢關節滑桿(disfigure 軸位見 §4)
+- ✅ 場景 preset(下拉選單自動生成自 `PRESETS`):cspine-lateral、cspine-swimmers、pelvis-ap、skull-stenvers、skull-stenvers-arcelin、skull-caldwells、waters-view、ankle-ap 等
 - ✅ 截圖 PNG / 匯出匯入設定 JSON / 白底切換
 - ✅ 美術 pass:示範圖風格(灰肢體 + 藍衣人偶、粉紅雷射、灰藍場景、柔光)
 - ✅ 設備細節 pass:膠囊形球管殼 + 圓角準直儀 + 把手 + 接頭(yoke 掛 rig 不隨俯仰轉)、拱頂壁架殼(ExtrudeGeometry)、圓邊檯面(RoundedBoxGeometry)
@@ -84,7 +96,9 @@
 ## 5. 接手者 cheatsheet
 
 - 本機跑:`python -m http.server 8765 --directory .`;preview launch config 在 `..\Xray\.claude\launch.json`(名稱 sim3d)
-- 截圖管道:背景跑 `python tools/shot_server.py 8766` → preview_eval 裡 render + POST → `shots/*.png` 直接 Read
+- 截圖管道:背景跑 `python tools/shot_server.py 8766` → preview_eval 裡 render + POST → `shots/*.png` 直接 Read。⚠️ embedded preview canvas 常變 1px,截圖前先 `s.renderer.setSize(960,720,false); c.width=960;c.height=720; s.camera.aspect=960/720; s.camera.updateProjectionMatrix();`(真實瀏覽器正常,只影響截圖)
+- 確認線上版本:畫面右側讀數第一行 `build swNN`(在 applyAll 末端 readout)。改視覺後把號碼 +1,叫使用者用無痕/`?v=` 確認看到新號
+- UI 額外滑桿群:「病人服(袖長)」前/後(`uSleeveFront/Back`)、「光野範圍閘(跟著球管)」深度Z/範圍r(`S.paintGate`)、「X 光球管」位置X/Z/焦點高/俯仰/光野寬高
 - 加 preset:複製 `PRESETS` 一筆,joints 用路徑語法;先在 console 用 `__sim.setJoint()` / `__sim.S` 調好再回填
 - 主站缺照清單:見 `..\Xray\positions.json`(47 筆 `images.positioning_photo` 為空者);出圖優先序:已 reviewed 10 筆 → 骨盆/髖/腹部隱私群 → 其餘
 - 部署:push main → GitHub Pages(repo Settings → Pages 啟用 main / root)
