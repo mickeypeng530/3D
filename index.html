@@ -139,6 +139,7 @@ const uFieldW = uniform(0.24);
 const uFieldH = uniform(0.30);
 const uBeamLen = uniform(1.0);
 const uCrossOn = uniform(1);
+const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示意圖風格)
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
 // 套用在任何材質的 colorNode 上(人偶皮膚 + 牆/板/檯面),取代圓形 spotlight 光池
 function beamPaint(base, onSurface) {
@@ -179,7 +180,7 @@ function beamPaint(base, onSurface) {
   // 光野:乘法提亮(保留布料/皮膚色相,不被白光沖淡)+ 極淡暖色調
   let c = base.mul(fm.mul(0.5).add(1));                  // 最多 1.5x 亮度
   c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
-  c = mix(c, c.mul(0.45), fm.mul(crossBand));            // 十字陰影帶
+  c = mix(c, c.mul(0.45), fm.mul(crossBand).mul(uShowCross));   // 十字陰影帶(可關)
   return c;
 }
 
@@ -188,7 +189,7 @@ function beamPaint(base, onSurface) {
   // 模型空間 y 0~1.785、x 左右、z 前後(胸在 +z)
   const y = positionGeometry.y, x = positionGeometry.x, z = positionGeometry.z;
   // 上衣:胸腹段,柔邊;圓領口 = 前胸高處挖一個圓(高 y + 前 z + 近中線)
-  const torsoBand = smoothstep(float(1.04), float(1.10), y).mul(smoothstep(float(1.60), float(1.52), y));  // 上緣升到肩
+  const torsoBand = smoothstep(float(0.70), float(0.80), y).mul(smoothstep(float(1.60), float(1.52), y));  // 下緣降到與短褲相接(腰部不露膚)、上緣升到肩
   const sideIn = smoothstep(float(0.34), float(0.28), abs(x));                 // 加寬到含肩
   // 圓領口:高 y + 前 z + 近中線 三者皆成立處挖空(露出胸前皮膚)
   const openY = smoothstep(float(1.48), float(1.56), y);   // 領口提高:只在喉部開,胸口蓋住
@@ -208,7 +209,7 @@ function beamPaint(base, onSurface) {
   const dots = sin(x.mul(95)).mul(sin(y.mul(95))).mul(sin(z.mul(95)));
   const dotMask = smoothstep(float(0.5), float(0.85), dots).mul(clothMask).mul(0.10);
   const gown = color("#7791ba");                       // 中深藍病人服
-  let c = mix(color("#bfc4cb"), gown, clothMask);
+  let c = mix(color("#c9b29a"), gown, clothMask);   // 膚色偏暖(淺咖啡)
   c = mix(c, color("#5d77a2"), dotMask);               // 點點略深
 
   // 光野 + 十字(畫在皮膚上)
@@ -567,6 +568,7 @@ function applyAll() {
   uFieldH.value = S.tube.fieldH;
   uBeamLen.value = L;
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
+  uShowCross.value = (S.showCross === 0) ? 0 : 1;
   uSurfaceField.value = (S.surfaceField === 0) ? 0 : 1;   // 0 = 光野只畫在人偶身上,檯面乾淨
   beamGroup.updateWorldMatrix(true, false);
   uBeamInv.value.copy(beamGroup.matrixWorld).invert();
@@ -679,9 +681,10 @@ const PRESETS = {
     joints: { "l_arm.z": -72, "r_arm.z": -72 },
     tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 15, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100,機身斜 15° caudad
     surfaceField: 0,   // 光野只畫在頭上,壁架/牆乾淨
+    showCross: 0,      // 示意圖風格:只留柔光罩,不畫十字陰影
     ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.52, z: -1.52, rx: 0.16, ry: 0.18, rz: 0.18 },   // 頭部影子
-    cam: { px: 0.7, py: 1.7, pz: 0.2, tx: -0.85, ty: 1.5, tz: -1.4 }
+    cam: { px: -2.19, py: 1.64, pz: -1.55, tx: -0.9, ty: 1.5, tz: -1.55 }   // 側面 profile 臉朝壁架(近示意圖)
   }
 };
 
@@ -696,6 +699,7 @@ function applyPreset(key) {
   S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   S.occl = p.occl ? { ...p.occl } : null;
   S.surfaceField = (p.surfaceField === undefined) ? 1 : p.surfaceField;
+  S.showCross = (p.showCross === undefined) ? 1 : p.showCross;
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
   applyAll();
