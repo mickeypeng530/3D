@@ -20,7 +20,7 @@
   - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
   - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
   - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 **h=1.76 真斜 8° caudad(pitch 82)**、SID 100、光野 20×24。**示意圖風格**:`showCross:0` + `surfaceField:0` + 側面 profile 相機(對照 `..\Xray\caldwell view示意圖.png`)。CR 真斜(非假機身斜),想要完整 SOP 15° 把 pitch 調 75
-  - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**頭後仰 head.x -24°**(下巴上抬頂板、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.60、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片
+  - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**軀幹前傾 waist.x +10°**(臉到板而胸口不陷,見下「臉貼板」坑)+ **頭後仰 head.x -26°**(下巴上抬、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.52、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片
 - ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
 - **2026-06-14 全域風格化**:① 膚色基底改暖色淺咖啡 `#c9b29a`(原 `#bfc4cb`,影響所有 view);② 病人服上衣下緣延伸到與短褲相接(torsoBand 下緣 0.70-0.80),腰部不再露膚 = 連續一件式;③ 新增 `uShowCross` uniform + per-preset `showCross` 旗標(0=只留柔光罩不畫十字),示意圖風格用
 
@@ -77,6 +77,7 @@
   - **左右關節內建鏡像:對稱動作用「同號」**(兩腿內旋 = l_thigh.y 與 r_thigh.y 都 -18;雙臂垂放 = 都 -72)。不要像一般骨架那樣左右反號
 - 🔑🔑 **人偶完全不吃場景燈**(2026-06-14 證實):任何 AmbientLight / DirectionalLight / cameraLight 改 intensity 對人偶零效果(變形綁在材質內,材質不能換)。俯臥/側臥時背光面會全黑。**解法:material.emissiveNode = colorNode × wrap-diffuse 自照亮**(`shade = (normalWorld·Ldir·0.5+0.5)·0.5+0.42`,Ldir≈(0.3,0.85,0.45))→ 任何體位都明亮、又有立體感。改 emissiveNode 後站姿/仰臥/俯臥全部一致變好。**別再花時間調燈去救人偶亮度**
 - **俯臥(prone)= 仰臥 preset 把 fig.rotY 設 180**(臉朝下);頭轉 = head.y;Stenver's/Arcelin 已用此法。scene.background 改色無效(disfigure World 自管 clear)
+- 🔑 **「臉貼板」類直立頭顱 view 的胸口陷板問題(2026-06-14)**:挺直站面對立架時**胸廓比臉更前凸**,硬把臉推到板會讓胸口陷入板內。**解法 = 軀幹前傾 `waist.x +10~14°`(骨盆後、上身靠向立架)+ 人偶 z 後移留前傾空間 + 補調 head.x**(前傾會把頭一起帶前,要多給後仰/點頭補回 SOP 頭角)。因為頭在腰樞紐上方比胸口高 → 前傾每度頭前移 > 胸口,臉先到板而胸口留後方傾斜。Waters 已用(waist.x 10、head.x -26)。Caldwell 同理(前額貼板)可加。**waist.x 正=前傾、負=後仰**
 - ⚠️ **WebGPU 截圖偶爾回傳舊幀**:reload 後第一次要等 ~4s,且 renderOnce 連呼 3 次中間 sleep 50ms 才穩;懷疑卡幀就 location.reload()
 
 ## 5. 接手者 cheatsheet

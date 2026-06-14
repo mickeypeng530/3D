@@ -696,8 +696,9 @@ const PRESETS = {
     // 本院 SOP:直立/俯臥,下巴頂板、鼻尖離板約 1cm;OML 與板呈 37°(MML 垂直板);
     // CR 垂直入射(無 caudad),通過上頷竇中心(鼻尖後方 acanthion);SID 100
     // 與 Caldwell 差別:頭後仰(下巴貼板取代前額貼板)、CR 不傾。防雷:仰角別過大
-    fig: { x: -0.9, z: -1.60, y: 0, rotY: 180, rotZ: 0 },   // 貼近板
-    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -24 },   // 頭後仰 24°(下巴上抬頂板、鼻尖離板)
+    fig: { x: -0.9, z: -1.52, y: 0, rotY: 180, rotZ: 0 },   // 後移留前傾空間
+    // 軀幹前傾 waist.x 10°(骨盆後、上身靠向立架),臉到板而胸口不陷;頭再後仰補回 OML 37°
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "waist.x": 10, "head.x": -26 },
     tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100;水平垂直入射 acanthion(鼻基)
     surfaceField: 0,   // 光野只畫在頭上
     showCross: 0,      // 示意圖風格:只留柔光罩
