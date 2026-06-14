@@ -203,14 +203,15 @@ function beamPaint(base, onSurface) {
   const neckline = openY.mul(openZ).mul(openX).oneMinus();
   let top = torsoBand.mul(sideIn).mul(neckline);
   // 短袖:rest pose 為 T-pose,手臂沿 ±X;從肩(|x|≈0.26)蓋到近端前臂(|x|≈0.52),並包住手臂 y/z
-  // 袖長前/後各自可調(uniform):前側(+z)與後側(-z)外緣 |x| 截斷分別控制,
-  // 補正 disfigure 彎曲造成的前長後短。zFrac:0=後 1=前,內插出當地外緣門檻
-  const zFrac = smoothstep(float(-0.06), float(0.06), z);
+  // ⚠️ 手臂 rest 中心線實測在 (y≈1.46, z≈-0.08),且手臂 z 全為負(-0.14~-0.03)。
+  // 圓管中心與前後分界都要以 z=-0.08 為基準,否則只罩到前緣、前後分界錯位。
+  const dy = y.sub(1.46), dz = z.add(0.08);
+  const armR2 = dy.mul(dy).add(dz.mul(dz));
+  const armTube = smoothstep(float(0.016), float(0.008), armR2);   // 圓管罩住整個手臂截面
+  // 袖長前/後各自可調(uniform)。zFrac 以 -0.08 為中心:0=後(更負 z)1=前(近 -0.04)
+  const zFrac = smoothstep(float(-0.12), float(-0.04), z);
   const sleeveOuter = mix(uSleeveBack, uSleeveFront, zFrac);
   const armX = smoothstep(float(0.26), float(0.30), abs(x)).mul(smoothstep(sleeveOuter, sleeveOuter.sub(float(0.04)), abs(x)));
-  // 袖子橫截面用「離手臂中心線的徑向距離」(rest 中心≈y1.46,z0),避免水平 y 帶斜切下垂手臂造成斜向 hem
-  const dy = y.sub(1.46), armR2 = dy.mul(dy).add(z.mul(z));
-  const armTube = smoothstep(float(0.016), float(0.008), armR2);   // 半徑 ~0.09→0.13 m 的圓管(平方比較)
   const sleeve = armX.mul(armTube);
   // 短褲:髖段全寬
   const shorts = smoothstep(float(0.66), float(0.70), y).mul(smoothstep(float(1.08), float(1.02), y));
