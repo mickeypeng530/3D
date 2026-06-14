@@ -585,7 +585,7 @@ function applyAll() {
 
   document.getElementById("readout").innerHTML =
     `SID:<b>${sidTxt}</b><br>` +
-    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 角 <b>${(S.tube.pitch + (S.tube.bodyTilt || 0))}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
+    `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${(S.tube.bodyTilt || 0)}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
 }
 
@@ -669,6 +669,19 @@ const PRESETS = {
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
+  },
+  "skull-caldwells": {
+    label: "副鼻竇 Caldwell 位(直立 PA)",
+    // 本院 SOP:坐/站於立式偵檢板前,前額+鼻貼板,OML 垂直偵檢板;
+    // CR 向腳側傾 15°,由鼻根射出;SID 100。PA:面向壁架,球管在後水平射向壁架
+    // 面向壁架 = rotY 180(臉朝 -z 後牆);球管在 +z 側水平射 -z(pitch 90)
+    fig: { x: -0.9, z: -1.50, y: 0, rotY: 180, rotZ: 0 },   // 臉貼板
+    joints: { "l_arm.z": -72, "r_arm.z": -72 },
+    tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 15, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100,機身斜 15° caudad
+    surfaceField: 0,   // 光野只畫在頭上,壁架/牆乾淨
+    ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: -0.9, y: 1.52, z: -1.52, rx: 0.16, ry: 0.18, rz: 0.18 },   // 頭部影子
+    cam: { px: 0.7, py: 1.7, pz: 0.2, tx: -0.85, ty: 1.5, tz: -1.4 }
   }
 };
 
