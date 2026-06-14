@@ -19,7 +19,8 @@
 - ✅ **使用者已定稿 2 個缺照 view**(2026-06-14):
   - **pelvis-ap**(仰臥):雙腿內旋 18°(thigh.y 同號)、CR 對 ASIS 下 5cm、SID 102、光野 35×43;使用者選低側斜構圖
   - **skull-stenvers**(俯臥)+ **skull-stenvers-arcelin**(仰臥替代):面轉對側 head.y 45、CR 入點顳/耳(使用者調 tube x=-0.12,z=0.57)、SID 100、光野 20×19、球管機身視覺斜 12°(與光束解耦)、檯面光野關閉(surfaceField:0)。**官方參考圖 `samples/stenvers_final.png` = 使用者最終截圖**
-  - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 h=1.62(抬高使光野落鼻根)、機身斜 15° caudad、SID 100、光野 20×24。**示意圖風格**:`showCross:0`(不畫十字陰影,只留柔光罩)+ `surfaceField:0`(光野只在頭)+ 側面 profile 相機(臉朝壁架,對照 `..\Xray\caldwell view示意圖.png`)
+  - **skull-caldwells**(直立 PA,2026-06-14):面向壁架 rotY 180、**點頭 head.x 15°**(下巴內收、前額朝板)、fig z=-1.55 貼板、球管 **h=1.76 真斜 8° caudad(pitch 82)**、SID 100、光野 20×24。**示意圖風格**:`showCross:0` + `surfaceField:0` + 側面 profile 相機(對照 `..\Xray\caldwell view示意圖.png`)。CR 真斜(非假機身斜),想要完整 SOP 15° 把 pitch 調 75
+  - **waters-view**(直立 PA 頭後仰,2026-06-14):面向壁架 rotY 180、**頭後仰 head.x -24°**(下巴上抬頂板、鼻尖離板≈1cm,SOP OML 37°/MML 垂直板)、fig z=-1.60、球管 **h=1.52 pitch 90 垂直入射 acanthion(鼻基)**、SID 100。與 Caldwell 共用示意圖風格(showCross/surfaceField 0、側面 profile)。防雷:仰角過大/不足是最常見不良片
 - ⏳ 待辦:批次產「已 reviewed 缺照」其餘 view → 47 筆全補。臥位/頭顱姿勢 workaround 已記錄(見下)
 - **2026-06-14 全域風格化**:① 膚色基底改暖色淺咖啡 `#c9b29a`(原 `#bfc4cb`,影響所有 view);② 病人服上衣下緣延伸到與短褲相接(torsoBand 下緣 0.70-0.80),腰部不再露膚 = 連續一件式;③ 新增 `uShowCross` uniform + per-preset `showCross` 旗標(0=只留柔光罩不畫十字),示意圖風格用
 

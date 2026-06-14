@@ -690,6 +690,20 @@ const PRESETS = {
     ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.52, z: -1.52, rx: 0.16, ry: 0.18, rz: 0.18 },   // 頭部影子
     cam: { px: -2.19, py: 1.64, pz: -1.55, tx: -0.9, ty: 1.5, tz: -1.55 }   // 側面 profile 臉朝壁架(近示意圖)
+  },
+  "waters-view": {
+    label: "副鼻竇 Waters 位(直立 PA,頭後仰)",
+    // 本院 SOP:直立/俯臥,下巴頂板、鼻尖離板約 1cm;OML 與板呈 37°(MML 垂直板);
+    // CR 垂直入射(無 caudad),通過上頷竇中心(鼻尖後方 acanthion);SID 100
+    // 與 Caldwell 差別:頭後仰(下巴貼板取代前額貼板)、CR 不傾。防雷:仰角別過大
+    fig: { x: -0.9, z: -1.60, y: 0, rotY: 180, rotZ: 0 },   // 貼近板
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -24 },   // 頭後仰 24°(下巴上抬頂板、鼻尖離板)
+    tube: { x: -0.9, z: -0.66, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.20, fieldH: 0.24, beamOn: 1 },  // SID 100;水平垂直入射 acanthion(鼻基)
+    surfaceField: 0,   // 光野只畫在頭上
+    showCross: 0,      // 示意圖風格:只留柔光罩
+    ws: { h: 1.52, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: -0.9, y: 1.50, z: -1.55, rx: 0.16, ry: 0.18, rz: 0.18 },   // 頭部影子
+    cam: { px: -2.19, py: 1.60, pz: -1.55, tx: -0.9, ty: 1.5, tz: -1.55 }   // 側面 profile
   }
 };
 
