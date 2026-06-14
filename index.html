@@ -145,6 +145,9 @@ const uFieldH = uniform(0.30);
 const uBeamLen = uniform(1.0);
 const uCrossOn = uniform(1);
 const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示意圖風格)
+const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
+const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
+const uPaintR = uniform(0.15);
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
 // 套用在任何材質的 colorNode 上(人偶皮膚 + 牆/板/檯面),取代圓形 spotlight 光池
 function beamPaint(base, onSurface) {
@@ -181,7 +184,10 @@ function beamPaint(base, onSurface) {
 
   // 承光面(檯/牆/板)可整體關閉光野(uSurfaceField=0 -> 光野只畫在人偶身上)
   const surfGate = onSurface ? uSurfaceField : float(1);
-  const fm = fieldMask.mul(lit).mul(surfGate);
+  // 範圍閘:只在 uPaintC 附近著色(把光野/十字限制在頸部,排除舉起的手臂等)
+  const pgd = positionWorld.sub(uPaintC).length();
+  const paintGate = mix(float(1), smoothstep(uPaintR.add(0.05), uPaintR.sub(0.02), pgd), uPaintGateOn);
+  const fm = fieldMask.mul(lit).mul(surfGate).mul(paintGate);
   // 光野:乘法提亮(保留布料/皮膚色相,不被白光沖淡)+ 極淡暖色調
   let c = base.mul(fm.mul(0.5).add(1));                  // 最多 1.5x 亮度
   c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
@@ -586,6 +592,15 @@ function applyAll() {
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
   uShowCross.value = (S.showCross === 0) ? 0 : 1;
   uSurfaceField.value = (S.surfaceField === 0) ? 0 : 1;   // 0 = 光野只畫在人偶身上,檯面乾淨
+  if (S.paintGate) {   // 限定著色範圍(只在頸部畫,排除手臂)
+    const pg = S.paintGate;
+    uPaintGateOn.value = 1;
+    // followBeam:中心跟著球管 x/高(光束軸),只固定深度 z → 拖球管時範圍閘自動跟上
+    uPaintC.value.set(pg.followBeam ? S.tube.x : pg.x, pg.followBeam ? GL + S.tube.h : pg.y, pg.z);
+    uPaintR.value = pg.r;
+  } else {
+    uPaintGateOn.value = 0;
+  }
   beamGroup.updateWorldMatrix(true, false);
   uBeamInv.value.copy(beamGroup.matrixWorld).invert();
   // 身體遮擋橢球(房間座標)
@@ -626,8 +641,9 @@ const PRESETS = {
     // 下顎抬起;CR 水平對 C7-T1(約 T1 棘突);SID 102。可向尾 3-5°
     fig: { x: -0.9, z: -1.42, y: 0, rotY: 90, rotZ: 0 },   // 側位,右肩近板(-z)
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
-    tube: { x: -0.9, z: -0.64, h: 1.44, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1
-    surfaceField: 1, showCross: 1,   // 這個 view 要十字 + 光線框畫在皮膚/板上(對照示範圖)
+    tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
+    surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
+    paintGate: { z: -1.42, r: 0.18, followBeam: 1 },   // 只在頸部 C7-T1 附近畫(中心跟著球管),排除舉起的手臂
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
     cam: { px: 1.0, py: 1.6, pz: 0.28, tx: -0.9, ty: 1.35, tz: -1.42 }
