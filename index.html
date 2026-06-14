@@ -176,7 +176,9 @@ function beamPaint(base, onSurface) {
   // 承光面(檯/牆/板)可整體關閉光野(uSurfaceField=0 -> 光野只畫在人偶身上)
   const surfGate = onSurface ? uSurfaceField : float(1);
   const fm = fieldMask.mul(lit).mul(surfGate);
-  let c = base.add(color("#ffcf6a").mul(fm.mul(0.5)));   // 暖橘光野,白皮膚上也看得見
+  // 光野:乘法提亮(保留布料/皮膚色相,不被白光沖淡)+ 極淡暖色調
+  let c = base.mul(fm.mul(0.5).add(1));                  // 最多 1.5x 亮度
+  c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
   c = mix(c, c.mul(0.45), fm.mul(crossBand));            // 十字陰影帶
   return c;
 }
