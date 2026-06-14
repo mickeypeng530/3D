@@ -609,10 +609,10 @@ function applyAll() {
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
   uShowCross.value = (S.showCross === 0) ? 0 : 1;
   uSurfaceField.value = (S.surfaceField === 0) ? 0 : 1;   // 0 = 光野只畫在人偶身上,檯面乾淨
-  if (S.paintGate) {   // 限定著色範圍(只在頸部一小塊畫,排除手臂)— 位置由滑桿可調
+  if (S.paintGate) {   // 限定著色範圍:中心跟著光束(球管 x/高),深度 z 與半徑可調
     const pg = S.paintGate;
     uPaintGateOn.value = 1;
-    uPaintC.value.set(pg.x, GL + pg.y, pg.z);
+    uPaintC.value.set(S.tube.x, GL + S.tube.h, pg.z);
     uPaintR.value = pg.r;
   } else {
     uPaintGateOn.value = 0;
@@ -659,7 +659,7 @@ const PRESETS = {
     joints: { "l_arm.z": 100, "r_arm.z": -72, "head.x": -12 },   // 近板側(左,-z)手臂高舉、遠側(右)下壓、下顎抬
     tube: { x: -0.9, z: -0.64, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.30, beamOn: 1 },  // SID 102,CR 對 C7-T1(對準頸部 x-0.9)
     surfaceField: 0, showCross: 1,   // 十字畫在皮膚上;板上不畫(其他消除)
-    paintGate: { x: -0.9, y: 1.5, z: -1.42, r: 0.11 },   // 十字/光野只畫在此小球內(頸 C7-T1);用「十字位置」滑桿擺到耳後
+    paintGate: { z: -1.42, r: 0.12 },   // 範圍閘中心跟著球管(x/高),深度 z=頸;用球管 焦點高/位置X 瞄到耳後
     beamShadow: 1,   // 陰影對齊水平光束:頭影在頭高、舉起的手影投到板頂以上(不再落在頭高度)
     ws: { h: 1.45, x: -0.9 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.40, z: -1.55, rx: 0.18, ry: 0.30, rz: 0.16 },
@@ -911,13 +911,12 @@ function readCamAngles() {
 }
 
 {
-  const g = addGroup("十字位置(光野範圍閘)", false);
+  const g = addGroup("光野範圍閘(跟著球管)", false);
   const pgGet = (k, d) => () => (S.paintGate ? S.paintGate[k] : d);
   const pgSet = (k) => (v) => { if (S.paintGate) S.paintGate[k] = v; };
-  addSlider(g, "十字 X 前後 (m)", -2.2, 2.4, 0.01, pgGet("x", 0), pgSet("x"));
-  addSlider(g, "十字 Y 高度 (m)", 0.5, 2.2, 0.01, pgGet("y", 1.5), pgSet("y"));
-  addSlider(g, "十字 Z 深度 (m)", -1.9, 2.1, 0.01, pgGet("z", -1.42), pgSet("z"));
-  addSlider(g, "十字 範圍 r (m)", 0.05, 0.4, 0.005, pgGet("r", 0.11), pgSet("r"));
+  // 中心跟球管 x/高(用「X 光球管」的 焦點高/位置X 瞄位置);這裡只調深度與範圍大小
+  addSlider(g, "閘 深度 Z (m)", -1.9, 2.1, 0.01, pgGet("z", -1.42), pgSet("z"));
+  addSlider(g, "閘 範圍 r (m)", 0.05, 0.4, 0.005, pgGet("r", 0.12), pgSet("r"));
 }
 
 {
