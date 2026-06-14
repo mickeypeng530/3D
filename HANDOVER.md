@@ -8,6 +8,8 @@
   - 承光面(板/牆/檯,sw20):一塊柔和**光野**(`fieldLit·uPlateField` 微亮 + 微暖)+ 身體**柔影**(`shadow·uPlateShadow`),**但不畫投影十字**。`fieldLit = fieldMask·lit·surfGate`、`shadow = fieldMask·(1-lit)·surfGate`。預設 `uPlateField 0.35`、`uPlateShadow 0.5`;UI「板上光野」「板上影濃」可調(0 = 關)。
   - 身體皮膚:光野亮區 + 暖調 + 十字(`bodyGate` 橢球只罩後頸/肩、排除舉起手臂)。
   - 演進:sw18 誤把**亮光野矩形+投影十字**全投到板上 → 打槍;sw19 改「板上只剩柔影」→ 使用者說「範例圖影子後面要有一塊光野」;sw20 = 板上「柔光野+柔影、無十字」。`surfaceField` 旗標仍是承光面著色總開關(swimmer=1)。
+  - **sw21**:① 板上光野改用**乾淨矩形 `nearFade·inX·inZ`(不套 farFade)**——farFade 沿光束距離切、打在斜板面上會切出對角線 → 角落黑三角;拿掉就乾淨。② 加**光野框線** `uPlateFrame`(矩形內緣一圈、UI「板上框線」)。③ 皮膚十字改**混向柔灰 `#808080`**(不再單純壓暗),近示範圖灰色定位線。UI 新增「板上光野/板上影濃/板上框線/十字線寬」四條微調滑桿。
+  - 診斷 URL 參數再加 `tx/ty/tz`(相機 target 覆寫,對準板面除錯用)。
 - **肩部光**:`paintGate {z:-1.37, r:0.13, ry:0.20}`(涵蓋後頸+肩),`r` 窄到排除手臂(在 -z 板側)。
 - **十字線寬可調**:`uCrossW`(半寬 m,預設 0.011);UI「十字線寬 (mm)」1-30mm。
 - 使用者微調值:`tube {x:-0.94, h:1.5, pitch:88, fieldW:0.16, fieldH:0.38}`、SID 102。十字耳後位置/肩範圍仍可滑桿微調。
