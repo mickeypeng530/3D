@@ -154,6 +154,7 @@ const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
 const uCrossW = uniform(0.011);   // 十字線半寬(m),外緣(UI「十字線寬」可調)
 const uPlateShadow = uniform(0.5);  // X 光板上「身體擋光柔影」濃淡(0=無影)
 const uPlateField = uniform(0.35);  // X 光板上「光野」亮度(0=板上不顯光野,只剩柔影)
+const uPlateFrame = uniform(1);     // X 光板上光野「框線」(0=不畫框)
 const uPaintR = uniform(0.15);    // 閘水平半徑(x/z):窄→排除舉起的手臂
 const uPaintRY = uniform(0.30);   // 閘垂直半徑(y):高→涵蓋整段頸,不必把水平半徑撐大
 // 光野著色工廠:依 Skull AP 實拍 — 柔邊矩形暖光 + 中央寬軟邊十字陰影
@@ -205,23 +206,32 @@ function beamPaint(base, onSurface) {
   const dgate = positionWorld.sub(uPaintC);
   const pgd = vec3(dgate.x.div(uPaintR), dgate.y.div(uPaintRY), dgate.z.div(uPaintR)).length();   // 橢球正規化距離,內部 <1
   if (onSurface) {
-    // 承光面(X 光板/牆/檯):依 swimmer 示範圖 —— 一塊柔和「光野」+ 身體擋光的柔影,
+    // 承光面(X 光板/牆/檯):依 swimmer 示範圖 —— 一塊柔和「光野」+ 框線 + 身體擋光的柔影,
     // 但**不畫投影十字**(十字只畫在皮膚上)。
-    const fieldLit = fieldMask.mul(lit).mul(surfGate);          // 光野範圍內、沒被身體擋住處 → 微亮
-    const shadow = fieldMask.mul(lit.oneMinus()).mul(surfGate); // 光野範圍內、被身體擋住處 → 柔影
+    // ⚠️ 用「乾淨矩形」rect = nearFade·inX·inZ,**不套 farFade**:farFade 沿光束距離切,
+    //    打在斜面的板上會切出一條對角線 → 角落出現黑色三角形。拿掉就乾淨。
+    const rect = nearFade.mul(inX).mul(inZ).mul(uCrossOn);
+    const fieldLit = rect.mul(lit).mul(surfGate);          // 光野範圍內、沒被身體擋住處 → 微亮
+    const shadow = rect.mul(lit.oneMinus()).mul(surfGate); // 光野範圍內、被身體擋住處 → 柔影
+    // 框線:矩形內緣一圈(像示範圖的光野邊框)
+    const frame = max(
+      smoothstep(halfW.sub(0.012), halfW.sub(0.004), abs(posB.x)),
+      smoothstep(halfH.sub(0.012), halfH.sub(0.004), abs(posB.z))
+    ).mul(rect).mul(surfGate);
     let c = base.mul(fieldLit.mul(uPlateField).add(1));         // 光野微亮
     c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fieldLit.mul(0.4)));  // 微暖
     c = c.mul(float(1).sub(shadow.mul(uPlateShadow)));          // 身體柔影
+    c = mix(c, c.mul(float(0.62)), frame.mul(uPlateFrame));     // 光野框線(稍深的線)
     return c;
   }
-  // 身體皮膚:光野亮區 + 暖調 + 十字(範圍閘只罩後頸/肩,排除舉起的手臂)
+  // 身體皮膚:光野亮區 + 暖調 + 柔和灰十字(範圍閘只罩後頸/肩,排除舉起的手臂)
   const bodyGate = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(bodyGate);
   const bright = mix(float(0.5), float(1.0), uPaintGateOn);
-  const crossDark = mix(float(0.45), float(0.28), uPaintGateOn);
   let c = base.mul(fm.mul(bright).add(1));
   c = c.mul(mix(color("#ffffff"), color("#ffe6b0"), fm.mul(0.5)));  // 微暖
-  c = mix(c, c.mul(crossDark), fm.mul(crossBand).mul(uShowCross));   // 十字陰影帶(可關)
+  // 十字:柔和灰(混向灰色而非單純壓暗),近似示範圖的灰色定位線
+  c = mix(c, color("#808080"), fm.mul(crossBand).mul(uShowCross).mul(0.6));
   // 診斷:?dbg=1 時把著色遮罩染紅
   c = mix(c, color("#ff2030"), fm.mul(uDbgPaint));
   return c;
@@ -669,7 +679,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw20</span><br>` +
+    `<span style="color:#7fd1ff">build sw21</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -1001,6 +1011,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "十字線寬 (mm)", 1, 30, 0.5, () => uCrossW.value * 2000, v => uCrossW.value = v / 2000);
   addSlider(g, "板上光野", 0, 1, 0.02, () => uPlateField.value, v => uPlateField.value = v);
   addSlider(g, "板上影濃", 0, 1, 0.02, () => uPlateShadow.value, v => uPlateShadow.value = v);
+  addSlider(g, "板上框線", 0, 1, 0.05, () => uPlateFrame.value, v => uPlateFrame.value = v);
   addSlider(g, "光野顯示", 0, 1, 1, () => S.tube.beamOn, v => S.tube.beamOn = v);
   addSlider(g, "檯面光野", 0, 1, 1, () => (S.surfaceField === undefined ? 1 : S.surfaceField), v => S.surfaceField = v);
 }
@@ -1154,7 +1165,11 @@ document.getElementById("importFile").addEventListener("change", e => {
   if (q.get("dbg") === "1") uDbgPaint.value = 1;
   const num = (k) => q.has(k) ? +q.get(k) : null;
   const az = num("az"), el = num("el"), dist = num("dist");
-  if (az !== null || el !== null || dist !== null) {
+  const tx = num("tx"), ty = num("ty"), tz = num("tz");
+  if (tx !== null || ty !== null || tz !== null) {
+    controls.target.set(tx ?? controls.target.x, ty ?? controls.target.y, tz ?? controls.target.z);
+  }
+  if (az !== null || el !== null || dist !== null || tx !== null || ty !== null || tz !== null) {
     if (az !== null) camS.az = az;
     if (el !== null) camS.el = el;
     if (dist !== null) camS.dist = dist;
