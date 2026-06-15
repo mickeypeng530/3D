@@ -166,7 +166,7 @@ const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示
 const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
 const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
-const uSkinMode = uniform(0);     // 皮膚樣式:0=原本、1=陶土軟陰影、2=陶土暖影(UI「皮膚樣式」鈕切換)
+const uSkinMode = uniform(2);     // 皮膚樣式:0=原本、1=陶土軟陰影、2=陶土暖影(預設 2;UI「皮膚樣式」鈕切換)
 const uCrossW = uniform(0.008);   // 十字線半寬(m),外緣(UI「十字線寬」可調;使用者定 16mm→0.008)
 const uPaintRZ = uniform(0.09);   // 範圍閘:前後(z)半徑——窄→排除高舉在板側(-z)的手臂,但保留後頸/肩
 const uPlateField = uniform(0.35);  // X 光板上「光野」亮度(0=板上不顯光野);身體陰影由場景 sun 投影呈現
@@ -710,7 +710,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw26</span><br>` +
+    `<span style="color:#7fd1ff">build sw27</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
