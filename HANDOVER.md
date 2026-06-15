@@ -1,6 +1,16 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(十字=光野中央定位線跨整個光野、皮膚樣式比較鈕、面板收合、存到此 view,build sw26)
+> 最後更新:2026-06-15(新增 Styloid 莖突 view + 臥位真・CR 朝頭傾 crTilt + 張口示意貼花,build sw33)
+
+## sw27-33:Styloid(莖突)view + 新機制
+- **新 view `styloid`**(莖突,俯臥側位;SOP 見 `Xray/positions.json` styloid-temporal-styloid-process):俯臥、頭轉近側位(head.y~68)、左臂屈肘上抬手貼桌近頭、CR 朝頭傾 10°、對患側 EAM 下後。**使用者定版數值已寫進 preset**(sw33,tube x0.05/z0.55,crTilt -10)。
+- **臥位真・CR 朝頭傾 `crTilt`**(sw30):`tubeHead.rotation.z`(臥位=沿身體縱軸傾 cephalad/caudad,光束+機身一起轉,十字/光野跟著走;也加進 SID dir Euler)。**為什麼不是 pitch**:臥位(轉房間)下 pitch 變成水平擺動、不是朝頭。UI「CR 朝頭傾(臥位)」。站位 preset crTilt 0 不受影響。
+- **張口示意 `uMouthOpen`**(sw29):disfigure 無下顎關節 → 用臉部模型空間口部深色橢圓貼花近似張口(會跟頭轉/變形)。per-preset `mouthOpen` 旗標(styloid=1)+ `?mouth=1/2`(2=亮色探位)。座標 model (x0,y1.60,z0.092)。
+- **皮膚樣式預設**(sw27):`uSkinMode` 預設改 2(陶土暖影)。
+- 診斷 URL 再加 `tubex/tubez/tubeh`(球管位置覆寫)。
+- ⚠️ **擺姿勢教訓**(見 memory feedback-paste-values-verbatim):使用者貼 📋 數值 → 原封不動寫回,別自作主張改 pose。手調姿勢使用者整體判斷一定比 Claude 單規則+靜態截圖好。
+
+## sw19:swimmer 光影對齊 `Xray/Swimer view示範.jpeg`
 
 ## sw19:swimmer 光影對齊 `Xray/Swimer view示範.jpeg`
 **參考圖鐵則**:X 光板(bucky)上**只有身體的柔影**,沒有亮光野矩形、沒有投影十字;光野+十字**只畫在皮膚上**。
