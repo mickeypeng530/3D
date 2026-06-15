@@ -17,6 +17,12 @@
     padding:10px 12px 24px; box-sizing:border-box; z-index:10;
   }
   #panel h1 { font-size:15px; margin:2px 0 8px; color:#7fd1ff; }
+  #panel .phead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  #panel .phead h1 { margin:2px 0 4px; }
+  #btnPanelHide { flex:0 0 auto; padding:2px 10px; font-size:16px; line-height:1; }
+  #panel.collapsed { display:none; }
+  #panelShow { position:fixed; top:8px; right:8px; z-index:11; display:none; }
+  #panelShow.show { display:block; }
   #panel .hint { color:#9aa3b2; font-size:11px; margin:4px 0 8px; line-height:1.5; }
   select, button {
     background:#2b3242; color:#e6e9ef; border:1px solid #495066; border-radius:6px;
@@ -62,11 +68,19 @@
 </head>
 <body>
 
+<button id="panelShow" title="顯示控制面板">☰ 面板</button>
 <div id="panel">
-  <h1>X光擺位 3D 模擬器</h1>
+  <div class="phead">
+    <h1>X光擺位 3D 模擬器</h1>
+    <button id="btnPanelHide" title="收合面板">—</button>
+  </div>
   <div class="hint">滑鼠左鍵旋轉視角 / 右鍵平移 / 滾輪縮放。先選場景預設,再微調關節與球管。手指關節未列入滑桿,可由匯入 JSON 設定。</div>
 
   <select id="presetSel"></select>
+  <div class="btnrow">
+    <button id="btnSavePreset" title="把目前所有滑桿數值存到此 view(瀏覽器記住,下次開同 view 自動套用)">💾 存到此 view</button>
+    <button id="btnResetPreset" title="清除此 view 的自訂、回到內建預設">↺ 還原此 view</button>
+  </div>
   <div class="btnrow">
     <button data-view="oblique">視角:斜 45</button>
     <button data-view="front">正面</button>
@@ -152,7 +166,8 @@ const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只�
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
 const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
 const uCrossW = uniform(0.008);   // 十字線半寬(m),外緣(UI「十字線寬」可調;使用者定 16mm→0.008)
-const uCrossGate = uniform(0.55);  // 十字範圍:橢球正規化距離 pgd 的外緣(越大十字範圍越大;與光野閘分開)
+const uCrossRX = uniform(0.06);   // 十字閘:左右/前後半徑(窄→不繞頸側、不上手臂)
+const uCrossRY = uniform(0.24);   // 十字閘:上下半徑(長→十字垂直線自然往下延伸到斜方肌/上背)
 const uPlateField = uniform(0.35);  // X 光板上「光野」亮度(0=板上不顯光野);身體陰影由場景 sun 投影呈現
 const uPlateFrame = uniform(1);     // X 光板上光野「框線」(0=不畫框)
 const uPaintR = uniform(0.15);    // 閘水平半徑(x/z):窄→排除舉起的手臂
@@ -230,7 +245,9 @@ function beamPaint(base, onSurface) {
   //    十字的垂直面會沿整個閘高度畫、繞到頸側/背側,並畫到舉起的手臂(使用者圈圖)。
   //    十字改用小閘(pgd 內側 <~0.45),只在 CR 中心一小塊 → 不上手臂、不繞頸側。
   const bodyGate = mix(float(1), smoothstep(float(1.10), float(0.92), pgd), uPaintGateOn);
-  const crossGate = mix(float(1), smoothstep(uCrossGate, uCrossGate.sub(0.15), pgd), uPaintGateOn);
+  // 十字專屬「細長柱狀」橢球閘:上下長(往下延伸)、左右窄(不繞頸側、不上手臂)
+  const cgd = vec3(dgate.x.div(uCrossRX), dgate.y.div(uCrossRY), dgate.z.div(uCrossRX)).length();
+  const crossGate = mix(float(1), smoothstep(float(1.08), float(0.90), cgd), uPaintGateOn);
   const fm = fieldMask.mul(lit).mul(bodyGate);
   const crossFM = fieldMask.mul(lit).mul(crossGate);
   const bright = mix(float(0.5), float(1.0), uPaintGateOn);
@@ -685,7 +702,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw23</span><br>` +
+    `<span style="color:#7fd1ff">build sw24</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -833,6 +850,7 @@ function applyPreset(key) {
   S.beamShadow = p.beamShadow || 0;                        // 陰影對齊光束
   resetPose();
   for (const [path, v] of Object.entries(p.joints || {})) setJoint(path, v);
+  loadOverride(key);   // 套用使用者「存到此 view」的自訂(localStorage),覆蓋內建預設
   applyAll();
   syncSliders();
   if (p.cam) {
@@ -850,6 +868,39 @@ function applyPreset(key) {
     readCamAngles();
     syncSliders();
   }
+}
+
+/* ============================================================
+   「存到此 view」:把目前數值存到 localStorage,下次開同 view 自動套用
+   (正式站無法寫回原始碼,用 localStorage 讓微調持久;滿意後 📋 複製數值回填 preset)
+   ============================================================ */
+const PERSIST_UNIFORMS = {
+  uSleeveFront, uSleeveBack, uCrossW, uCrossRX, uCrossRY, uPlateField, uPlateFrame
+};
+function collectOverride() {
+  const joints = {};
+  for (const pth of ALL_PATHS) { const v = getJoint(pth); if (Math.abs(v) > 0.001) joints[pth] = +v.toFixed(2); }
+  const uniforms = {};
+  for (const k in PERSIST_UNIFORMS) uniforms[k] = PERSIST_UNIFORMS[k].value;
+  return { S: JSON.parse(JSON.stringify(S)), joints, uniforms };
+}
+function loadOverride(key) {
+  let raw = null;
+  try { raw = localStorage.getItem("ovr_" + key); } catch (e) { return; }
+  if (!raw) return;
+  let o; try { o = JSON.parse(raw); } catch (e) { return; }
+  if (o.S) {
+    Object.assign(S.fig, o.S.fig); Object.assign(S.tube, o.S.tube);
+    Object.assign(S.ws, o.S.ws); Object.assign(S.det, o.S.det);
+    if (o.S.room) S.room = o.S.room;
+    S.occl = o.S.occl || null;
+    S.paintGate = o.S.paintGate || null;
+    if (o.S.surfaceField !== undefined) S.surfaceField = o.S.surfaceField;
+    if (o.S.showCross !== undefined) S.showCross = o.S.showCross;
+    if (o.S.beamShadow !== undefined) S.beamShadow = o.S.beamShadow;
+  }
+  if (o.joints) { resetPose(); for (const [pth, v] of Object.entries(o.joints)) setJoint(pth, v); }
+  if (o.uniforms) for (const k in o.uniforms) if (PERSIST_UNIFORMS[k]) PERSIST_UNIFORMS[k].value = o.uniforms[k];
 }
 
 /* ============================================================
@@ -1015,7 +1066,8 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
   addSlider(g, "光野高 (cm)", 5, 45, 1, () => S.tube.fieldH * 100, v => S.tube.fieldH = v / 100);
   addSlider(g, "十字線寬 (mm)", 1, 30, 0.5, () => uCrossW.value * 2000, v => uCrossW.value = v / 2000);
-  addSlider(g, "十字範圍", 0.2, 1.2, 0.02, () => uCrossGate.value, v => uCrossGate.value = v);
+  addSlider(g, "十字長 (上下)", 0.05, 0.5, 0.01, () => uCrossRY.value, v => uCrossRY.value = v);
+  addSlider(g, "十字寬範圍 (左右)", 0.03, 0.2, 0.005, () => uCrossRX.value, v => uCrossRX.value = v);
   addSlider(g, "板上光野", 0, 1, 0.02, () => uPlateField.value, v => uPlateField.value = v);
   addSlider(g, "板上框線", 0, 1, 0.05, () => uPlateFrame.value, v => uPlateFrame.value = v);
   addSlider(g, "光野顯示", 0, 1, 1, () => S.tube.beamOn, v => S.tube.beamOn = v);
@@ -1135,6 +1187,31 @@ document.getElementById("btnCopy").addEventListener("click", async () => {
     toast("已開啟文字框,Ctrl+C 複製後可點它移除");
     ta.addEventListener("click", () => ta.remove());
   }
+});
+
+// 控制面板:收合 / 還原
+const panelEl = document.getElementById("panel");
+const panelShowBtn = document.getElementById("panelShow");
+document.getElementById("btnPanelHide").addEventListener("click", () => {
+  panelEl.classList.add("collapsed");
+  panelShowBtn.classList.add("show");
+});
+panelShowBtn.addEventListener("click", () => {
+  panelEl.classList.remove("collapsed");
+  panelShowBtn.classList.remove("show");
+});
+
+// 存到此 view / 還原此 view
+document.getElementById("btnSavePreset").addEventListener("click", () => {
+  try {
+    localStorage.setItem("ovr_" + presetSel.value, JSON.stringify(collectOverride()));
+    toast("已存到此 view(本機記住,重開同 view 自動套用)");
+  } catch (e) { toast("存檔失敗:" + e.message); }
+});
+document.getElementById("btnResetPreset").addEventListener("click", () => {
+  try { localStorage.removeItem("ovr_" + presetSel.value); } catch (e) {}
+  applyPreset(presetSel.value);
+  toast("已還原此 view 為內建預設");
 });
 
 document.getElementById("btnImport").addEventListener("click", () => document.getElementById("importFile").click());
