@@ -723,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw30</span><br>` +
+    `<span style="color:#7fd1ff">build sw31</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -832,10 +832,10 @@ const PRESETS = {
     //   中心對受檢側 EAM 下三指(≈5-6cm)、後兩指(≈3-4cm);SID 100;一次一側。
     // ⚠️ disfigure 無張口/下顎關節 → 示意圖省略「張口」;頭轉到側位用 head.y(待使用者微調)
     fig: { x: 0, z: 0.82, y: 0, rotY: 180, rotZ: 0 },   // 俯臥(使用者微調 z 0.82)
-    joints: {   // 使用者微調的俯臥姿勢:頭轉側位、軀幹貼檯、雙臂外展後擺、雙腿微屈足背抬
-      "head.x": 4, "head.y": 78,
-      "chest.x": 10, "waist.x": -3,
-      "l_arm.z": -72, "l_arm.x": -13, "r_arm.z": -72, "r_arm.x": -13,
+    joints: {   // 使用者微調的俯臥姿勢:頭轉側位、軀幹貼檯、左臂屈肘上抬近頭、右臂下垂、雙腿微屈足背抬
+      "head.x": 1, "head.y": 68, "head.z": -3,
+      "chest.x": 11, "chest.y": 5, "waist.x": -3,
+      "l_arm.z": 70, "l_elbow.y": 95, "r_arm.z": -78, "r_arm.x": -10,
       "l_leg.x": 6, "l_knee.x": 8, "l_ankle.x": 40,
       "r_leg.x": 6, "r_knee.x": 8, "r_ankle.x": 40
     },
