@@ -723,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw33</span><br>` +
+    `<span style="color:#7fd1ff">build sw34</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -772,6 +772,26 @@ const PRESETS = {
     tube: { x: 0.52, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.43, beamOn: 1 },
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },   // 壁架完全移出構圖(深色滑軌會像背景裡的一條線)
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },   // 身體影子:光野/十字不畫到身後檯面
+    cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
+  },
+  "pelvis-frog": {
+    label: "骨盆 Frog 蛙式(仰臥,雙髖屈外展)",
+    // 本院 SOP(reviewed):仰臥,兩 ASIS 等高不旋轉;雙髖雙膝彎曲、股骨外展 40-45°、雙足底相對(蛙腿);
+    //   CR 垂直對恥骨聯合上 2.5cm;SID 102。⚠️ 外傷/疑髖骨折禁用蛙位。
+    // 「轉房間」仰臥(同 pelvis-ap);蛙腿:hip 屈(leg.x)+外展(leg.z 同號=對稱)+膝屈(knee.x)
+    // ⚠️ disfigure 髖屈 55-90° 不穩,取中等起始值待使用者微調
+    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
+    joints: {
+      "l_arm.z": -72, "r_arm.z": -72,
+      "l_leg.x": 22, "r_leg.x": 22,      // 髖屈(少一點,膝才不會朝上)
+      "l_leg.z": 58, "r_leg.z": 58,      // 髖外展(同號=對稱;大→膝朝外側倒)
+      "l_thigh.y": -35, "r_thigh.y": -35, // 股骨外旋(膝向外、足底轉向中線)
+      "l_knee.x": 85, "r_knee.x": 85     // 膝屈(雙足底相對)
+    },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: 0.55, z: 0.55, h: 1.76, pitch: 0, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR 對恥骨聯合上 2.5cm;SID 102
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "ankle-ap": {
