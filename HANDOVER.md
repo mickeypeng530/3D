@@ -1,6 +1,6 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(swimmer 板上「只投柔影」+ 皮膚光野/十字、肩部光、十字線寬可調,build sw19)
+> 最後更新:2026-06-15(十字=光野中央定位線跨整個光野、皮膚樣式比較鈕、面板收合、存到此 view,build sw26)
 
 ## sw19:swimmer 光影對齊 `Xray/Swimer view示範.jpeg`
 **參考圖鐵則**:X 光板(bucky)上**只有身體的柔影**,沒有亮光野矩形、沒有投影十字;光野+十字**只畫在皮膚上**。
@@ -10,6 +10,8 @@
   - 演進:sw18 誤把**亮光野矩形+投影十字**全投到板上 → 打槍;sw19 改「板上只剩柔影」→ 使用者說「範例圖影子後面要有一塊光野」;sw20 = 板上「柔光野+柔影、無十字」。`surfaceField` 旗標仍是承光面著色總開關(swimmer=1)。
   - **sw21**:① 板上光野改用**乾淨矩形 `nearFade·inX·inZ`(不套 farFade)**——farFade 沿光束距離切、打在斜板面上會切出對角線 → 角落黑三角;拿掉就乾淨。② 加**光野框線** `uPlateFrame`(矩形內緣一圈、UI「板上框線」)。③ 皮膚十字改**混向柔灰 `#808080`**(不再單純壓暗),近示範圖灰色定位線。UI 新增「板上光野/板上影濃/板上框線/十字線寬」四條微調滑桿。
   - 診斷 URL 參數再加 `tx/ty/tz`(相機 target 覆寫,對準板面除錯用)。
+  - **sw26**:**皮膚樣式比較鈕**(🧑 皮膚樣式)——`uSkinMode` 0=原本/1=陶土軟陰影/2=陶土暖影,只改 `emissiveNode` 自照亮(膚色不變),uniform 即時切換、`?skin=` URL 參數、列入 PERSIST_UNIFORMS。差異刻意溫和。想更明顯就加大 `shade1/shade2` 參數或 `warmShadow`。
+  - **sw25**:**十字 = 光野中央定位線,線延伸到光野邊緣**(垂直↓肩、水平→後頸)。修正:十字**與光野共用同一個 fm**(不再用小十字閘);排除舉起的手臂改靠**範圍閘形狀**——把閘的前後半徑拆出 `uPaintRZ`(窄)→板側 -z 的手臂落在閘外。`paintGate` 變 `{z,r,ry,rz}`,swimmer `{z:-1.37, r:0.13, ry:0.22, rz:0.08}`。UI:閘 水平r(後頸寬)/垂直ry(到肩)/前後rz(排手臂)。移除 sw24 的十字長/寬範圍滑桿與 uCrossRX/RY。
   - **sw24**:① 十字垂直線被小閘截斷(使用者要它往下延伸到斜方肌)→ 十字閘改**細長柱狀橢球**(`uCrossRX` 窄 0.06 不繞頸/不上手臂、`uCrossRY` 長 0.24 往下延伸);UI「十字長/十字寬範圍」。② **控制面板收合/還原**(`—` 收合、浮動 `☰ 面板` 還原)。③ **「存到此 view / 還原此 view」**:把目前 S+關節+uniforms 存到 `localStorage["ovr_<preset>"]`,`applyPreset` 末端 `loadOverride()` 自動套用(正式站無法寫回原始碼,用 localStorage 讓微調持久;滿意後仍要 📋 複製數值由 Claude 回填 PRESETS 原始碼才會跨裝置/永久)。`PERSIST_UNIFORMS` 列出會被存的 uniform。
   - **sw23**:十字線跑到「左頸+左臂」根因——光野閘為了肩部光放大(r0.13/ry0.20),但**十字與光野共用同一大閘**→十字垂直面沿整個閘高繞頸側/上手臂。**修:十字改用自己的小閘**(`crossGate = smoothstep(uCrossGate, uCrossGate-0.15, pgd)`,只取橢球內側),光野維持大閘。UI 加「十字範圍」滑桿(`uCrossGate` 預設 0.55)。預設值寫入:袖長 0.28/0.28、十字線寬 16mm(`uCrossW 0.008`)。
   - **sw22**:修掉「光野左上角黑色三角形」(使用者圈圖確認在後腦陰影處)。真因:板上光野亮度被 occl 橢球挖洞(`fieldLit·lit` + occl 陰影項),粗橢球硬邊在角落切出三角(陰影算兩次)。**改:板上光野均勻打滿矩形**(不用 occl 挖洞),身體陰影**只**靠場景 sun 的柔和 profile 投影。移除 `uPlateShadow` uniform + 「板上影濃」滑桿。板影濃淡改由 `sun.intensity`/陰影本身決定。
@@ -38,16 +40,17 @@
 
 ## 0. 接手起點(先讀這段)
 
-**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚上十字+光野」微調**,線上版 build 號 `sw14`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現)。
+**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚十字/光野 + 質感」微調**,線上版 build 號 `sw26`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=26`)。
 
-**sw14 修掉「左脖子/左臂出現十字」根因(sw13 上個 session 卡在這)**:兩個獨立問題,都不是座標系 bug——
-  1. **左脖子十字** = 十字水平線是「過束軸的水平面」,橫切垂直脖子圓柱會繞一整圈;`facing` 門檻 `smoothstep(0,0.22)`(≈77°)太鬆,讓脖子兩側(法線朝球管 dot 接近 0)也被畫。→ 收緊到 `smoothstep(0.30,0.62)`(只畫真正正對球管的窄錐),側面/背側自動不畫,頸側暗帶抹寬「變暗」也一起解。
-  2. **左臂十字** = 範圍閘原是**球形**,要 r=0.18 才蓋整段頸高度,同時把高舉經過頸側的手臂包進去。→ 改**各向異性橢球閘**:`paintGate {z, r, ry}`,`ry` 撐高涵蓋整段頸、`r` 收窄(0.12)只罩脖子排除手臂。uniform `uPaintRY`,UI 多一條「閘 垂直 ry」滑桿。`pgd` 改橢球正規化距離(內部 <1,門檻 1.0)。
-  occl 與此無關(被 `isBody` 豁免),所以在 occl 上找不到原因。
+**目前著色模型(看 §2 swimmer 條與下方各 swNN 演進細節,這裡只給結論)**:
+- **皮膚十字/光野**:用 TSL `beamPaint`,**身體**畫光野亮區+十字、**承光面(X光板)**只畫柔光野+sun 柔影(無投影十字)。`beamPaint` 用 `if(onSurface)` 編譯期分支。
+- **十字 = 光野中央定位線**,與光野**共用同一範圍閘 fm**,線延伸到光野邊緣(垂直↓肩、水平→後頸)。
+- **範圍閘**`paintGate {z, r, ry, rz}`(橢球,跟球管 x/高;z/r/ry/rz 滑桿可調)。**排除舉起的手臂靠閘形狀**:`rz`(前後)收窄→板側 -z 手臂落在閘外。swimmer `{z:-1.37, r:0.13, ry:0.22, rz:0.08}`。
+- **facing 已廢除**(sw14-16 走過 facing 但錯,sw17 起改純空間閘;見下「著色機制重大修正」)。
+- **皮膚樣式**:`uSkinMode` 0/1/2(🧑 皮膚樣式 鈕),只改自照亮、膚色不變。
+- swimmer 微調值:`tube {x:-0.94, h:1.5, pitch:88, fieldW:0.16, fieldH:0.38}`、SID 102、袖長 0.28/0.28、十字線寬 16mm。**尚未存 `samples/swimmers_final.png`(待使用者拍板)**。
 
-**sw15 修掉「十字穿透到背面」根因(無範圍閘的 view,如 cspine-lateral)**:`facing` 舊版**包在 `gateVal` 內**,gate 關閉時整個 `mix(1, gateVal, 0)=1` → facing 失效 → 十字直接穿到脖子背面。cspine-lateral **沒有 paintGate**(swimmer 有),所以 swimmer 看不到穿透、cspine-lateral 看得到 —— 這就是「比較兩個 preset」的差異點。修法:把 `facing` 抽出來對**身體**一律生效(`onSurface ? 1 : smoothstep(0.30,0.62, normal·toFocal)`),範圍閘 `gateRegion` 獨立(只在 gate 開啟時限範圍)。承光面(牆/板/檯)不套 facing。**待使用者線上確認 sw15**。
-**sw16 實機修掉殘留「手臂/耳」著色(用 headless dbg=1 紅圖看出來)**:sw15 的 facing 已把**背側**清乾淨(實測 prone-90 背面無紅),但 swimmer 的**舉起手臂前緣**與**耳/下顎**仍落在範圍閘橢球內被畫到(手臂前緣朝球管→facing 擋不掉,只能靠閘位置)。修法:閘收更小並偏球管側 `paintGate {z:-1.38, r:0.09, ry:0.10}`(中心 z 偏 +z=球管側→排掉在 -z/板側的手臂;ry 壓低→不畫到耳/下顎)。實測手臂/耳乾淨、頸前十字保留。cspine-lateral(無閘)實測也正確:facing 讓著色只在正面、背側乾淨(sw15 反而修好了它原本會穿透的背側,**沒有把 swimmer 的錯誤套過去**)。
-- **sw15 新增**:① **SID (cm) 滑桿**(X 光球管群第一條):沿光束方向把球管推遠/拉近到指定焦點→受像器距離,其他球管軸不動;靠 `lastSID`/`lastBeamDir`(applyAll 末端記錄)反推 `S.tube.x/h/z`。② **「📋 複製目前數值」鈕**:把 preset/SID/完整 S/非零關節/袖長 dump 成 JSON 複製到剪貼簿(clipboard 失敗則開 textarea),方便貼給 Claude 對比「這次調哪些、哪個最接近」。
+**常用工具(sw15-24 陸續加的)**:SID(cm)滑桿、📋 複製目前數值、💾 存到此 view/↺ 還原此 view(localStorage)、控制面板收合(— / ☰)、headless 截圖+`?dbg/skin/p/hud/az/el/dist/tx/ty/tz` 診斷參數(見下「headless」段)。
 
 - **本機**:`python -m http.server 8765 --directory .`(或 preview launch config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
 - **線上**:push main → GitHub Pages `https://mickeypeng530.github.io/3D/`(約 1-2 分鐘部署)。repo `github.com/mickeypeng530/3D`。本機 git 在 `C:\Users\彭嗣翔\Claude_Work\3D`(獨立 repo,**非** Xray repo)。
