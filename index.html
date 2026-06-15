@@ -723,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw32</span><br>` +
+    `<span style="color:#7fd1ff">build sw33</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -841,7 +841,7 @@ const PRESETS = {
       "r_leg.x": 6, "r_knee.x": 8, "r_ankle.x": 40
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, crTilt: -10, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // 對頭(同 Stenver's 起點);CR 真・朝頭傾 10°(crTilt,光束+機身一起斜);中心待微調到患側 EAM 下後;SID 100;8x8 小光野
+    tube: { x: 0.05, z: 0.55, h: 1.74, pitch: 0, crTilt: -10, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // 使用者定版:CR 對患側 EAM 下後、真・朝頭傾 10°(crTilt);SID 102;8x8 小光野
     surfaceField: 0, showCross: 1,   // 十字畫在頭上(對 EAM 下後);檯面不畫
     mouthOpen: 1,                    // 張口示意(口腔深色貼花;disfigure 無下顎關節的近似)
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
