@@ -98,6 +98,7 @@
   </div>
   <div class="btnrow">
     <button id="btnCopy">📋 複製目前數值</button>
+    <button id="btnSkin">🧑 皮膚樣式</button>
   </div>
 
   <div id="readout"></div>
@@ -165,6 +166,7 @@ const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示
 const uPaintGateOn = uniform(0);                       // 1 = 光野/十字只畫在 uPaintC 附近(排除手臂等)
 const uPaintC = uniform(new THREE.Vector3(0, 0, 0));   // 限定著色的世界中心(如頸部 C7-T1)
 const uDbgPaint = uniform(0);     // 診斷:1 = 把著色遮罩染紅(?dbg=1)
+const uSkinMode = uniform(0);     // 皮膚樣式:0=原本、1=陶土軟陰影、2=陶土暖影(UI「皮膚樣式」鈕切換)
 const uCrossW = uniform(0.008);   // 十字線半寬(m),外緣(UI「十字線寬」可調;使用者定 16mm→0.008)
 const uPaintRZ = uniform(0.09);   // 範圍閘:前後(z)半徑——窄→排除高舉在板側(-z)的手臂,但保留後頸/肩
 const uPlateField = uniform(0.35);  // X 光板上「光野」亮度(0=板上不顯光野);身體陰影由場景 sun 投影呈現
@@ -294,9 +296,21 @@ function beamPaint(base, onSurface) {
   // 自發光:人偶變形綁在材質內不能換,且不吃場景燈(尤其俯臥/側臥背光面全黑)。
   // 用 emissiveNode 給一個與朝向相關的自照亮,任何體位都看得見、又不死板。
   const Ldir = new THREE.Vector3(0.3, 0.85, 0.45).normalize();
-  const ndl = normalWorld.dot(uniform(Ldir)).mul(0.5).add(0.5);   // wrap diffuse 0~1
-  const shade = ndl.mul(0.5).add(0.42);                            // 0.42~0.92
-  figure.material.emissiveNode = c.mul(shade);
+  const nl = normalWorld.dot(uniform(Ldir)).mul(0.5).add(0.5);    // wrap diffuse 0~1
+  const soft = smoothstep(float(0.0), float(1.0), nl);            // 緩和明暗過渡(陶土霧面感)
+  // 皮膚樣式 uSkinMode:0=原本、1=陶土軟陰影、2=陶土暖影(可用「皮膚樣式」鈕即時比較;膚色不變)
+  const m1 = smoothstep(float(0.5), float(1.5), uSkinMode);
+  const m2 = smoothstep(float(1.5), float(2.5), uSkinMode);
+  const shade0 = nl.mul(0.5).add(0.42);          // 原本:0.42~0.92
+  const shade1 = soft.mul(0.34).add(0.60);       // 陶土:軟、淺影(霧面)
+  const shade2 = soft.mul(0.44).add(0.50);       // 陶土暖影:對比略強、較有立體
+  let shade = mix(shade0, shade1, m1);
+  shade = mix(shade, shade2, m2);
+  let emi = c.mul(shade);
+  // mode2:暗處染暖(陶土暖影)
+  const warmShadow = mix(color("#c7a583"), color("#ffffff"), nl);
+  emi = mix(emi, emi.mul(warmShadow), m2.mul(0.6));
+  figure.material.emissiveNode = emi;
   figure.material.needsUpdate = true;
 }
 
@@ -696,7 +710,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw25</span><br>` +
+    `<span style="color:#7fd1ff">build sw26</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -869,7 +883,7 @@ function applyPreset(key) {
    (正式站無法寫回原始碼,用 localStorage 讓微調持久;滿意後 📋 複製數值回填 preset)
    ============================================================ */
 const PERSIST_UNIFORMS = {
-  uSleeveFront, uSleeveBack, uCrossW, uPlateField, uPlateFrame
+  uSleeveFront, uSleeveBack, uCrossW, uPlateField, uPlateFrame, uSkinMode
 };
 function collectOverride() {
   const joints = {};
@@ -1182,6 +1196,13 @@ document.getElementById("btnCopy").addEventListener("click", async () => {
   }
 });
 
+// 皮膚樣式循環:0 原本 / 1 陶土軟陰影 / 2 陶土暖影
+const SKIN_NAMES = ["原本(光滑)", "陶土・軟陰影", "陶土・暖影"];
+document.getElementById("btnSkin").addEventListener("click", () => {
+  uSkinMode.value = (uSkinMode.value + 1) % 3;
+  toast("皮膚樣式:" + SKIN_NAMES[uSkinMode.value]);
+});
+
 // 控制面板:收合 / 還原
 const panelEl = document.getElementById("panel");
 const panelShowBtn = document.getElementById("panelShow");
@@ -1239,6 +1260,7 @@ document.getElementById("importFile").addEventListener("change", e => {
   presetSel.value = startP;
   if (q.get("hud") === "0") document.getElementById("panel").style.display = "none";
   if (q.get("dbg") === "1") uDbgPaint.value = 1;
+  if (q.has("skin")) uSkinMode.value = +q.get("skin");
   const num = (k) => q.has(k) ? +q.get(k) : null;
   const az = num("az"), el = num("el"), dist = num("dist");
   const tx = num("tx"), ty = num("ty"), tz = num("tz");
