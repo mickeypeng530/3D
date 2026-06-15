@@ -710,7 +710,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw27</span><br>` +
+    `<span style="color:#7fd1ff">build sw28</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -809,6 +809,22 @@ const PRESETS = {
     surfaceField: 0,
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },
+    cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
+  },
+  "styloid": {
+    label: "莖突 Styloid(顳骨莖突,俯臥側位)",
+    // 本院 SOP(positions.json styloid-temporal-styloid-process):
+    //   俯臥,受檢側臉頰朝下貼板、頭近 true lateral,再朝檯面轉約 10°(左右錯開兩側 styloid);
+    //   曝光時張口(下顎/牙齒下移離開 styloid);CR 向頭側 10° cephalad,
+    //   中心對受檢側 EAM 下三指(≈5-6cm)、後兩指(≈3-4cm);SID 100;一次一側。
+    // ⚠️ disfigure 無張口/下顎關節 → 示意圖省略「張口」;頭轉到側位用 head.y(待使用者微調)
+    fig: { x: 0, z: 0.855, y: 0, rotY: 180, rotZ: 0 },   // 俯臥
+    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.y": 78 },   // 頭轉到近側位(受檢側臉頰朝下);角度待微調
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 10, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // 對頭(同 Stenver's 位置起點);CR 向頭 10°(視覺斜);中心待微調到患側 EAM 下後;SID 100;8x8 小光野
+    surfaceField: 0, showCross: 1,   // 十字畫在頭上(對 EAM 下後);檯面不畫
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.15, ry: 0.15, rz: 0.15 },   // 頭部影子
     cam: { px: -0.08, py: 1.35, pz: 1.25, tx: -0.08, ty: 0.86, tz: 0.57 }
   },
   "skull-caldwells": {
