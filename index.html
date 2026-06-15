@@ -637,6 +637,9 @@ function applyAll() {
   tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
   tubeHead.position.y = GL + S.tube.h;
   tubeHead.rotation.x = THREE.MathUtils.degToRad(S.tube.pitch);   // 控制光束(beamGroup 在此群組內)
+  // CR 朝頭/腳傾(真實傾角,光束+機身一起轉):臥位 view 用這個做 cephalad/caudad。
+  //   tubeHead.rotation.z 在臥位(轉房間)= 沿身體縱軸傾(朝頭/腳);站位則為 roll(一般不用)。
+  tubeHead.rotation.z = THREE.MathUtils.degToRad(S.tube.crTilt || 0);
   // 機身視覺傾斜(bodyTilt 相對 tubeHead;與光束解耦,只動外觀)
   tubeBody.rotation.x = THREE.MathUtils.degToRad(S.tube.bodyTilt || 0);
   yoke.position.y = GL + S.tube.h + 0.135;
@@ -646,7 +649,7 @@ function applyAll() {
 
   // SID:焦點至壁架板 / 檯面偵檢板 / 檯面 — 全部在「房間座標」解析計算
   // (房間可能整體旋轉,設備相對幾何不變,用 S 的數值算最穩)
-  const eul = new THREE.Euler(THREE.MathUtils.degToRad(S.tube.pitch), THREE.MathUtils.degToRad(S.tube.yaw), 0, "YXZ");
+  const eul = new THREE.Euler(THREE.MathUtils.degToRad(S.tube.pitch), THREE.MathUtils.degToRad(S.tube.yaw), THREE.MathUtils.degToRad(S.tube.crTilt || 0), "YXZ");
   const dir = new THREE.Vector3(0, -1, 0).applyEuler(eul);
   const focal = new THREE.Vector3(S.tube.x, GL + S.tube.h, S.tube.z);
   // 陰影光源:beamShadow 開時對齊光束方向(水平),使板上陰影為水平投影
@@ -720,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw29</span><br>` +
+    `<span style="color:#7fd1ff">build sw30</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -828,10 +831,16 @@ const PRESETS = {
     //   曝光時張口(下顎/牙齒下移離開 styloid);CR 向頭側 10° cephalad,
     //   中心對受檢側 EAM 下三指(≈5-6cm)、後兩指(≈3-4cm);SID 100;一次一側。
     // ⚠️ disfigure 無張口/下顎關節 → 示意圖省略「張口」;頭轉到側位用 head.y(待使用者微調)
-    fig: { x: 0, z: 0.855, y: 0, rotY: 180, rotZ: 0 },   // 俯臥
-    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.y": 78 },   // 頭轉到近側位(受檢側臉頰朝下);角度待微調
+    fig: { x: 0, z: 0.82, y: 0, rotY: 180, rotZ: 0 },   // 俯臥(使用者微調 z 0.82)
+    joints: {   // 使用者微調的俯臥姿勢:頭轉側位、軀幹貼檯、雙臂外展後擺、雙腿微屈足背抬
+      "head.x": 4, "head.y": 78,
+      "chest.x": 10, "waist.x": -3,
+      "l_arm.z": -72, "l_arm.x": -13, "r_arm.z": -72, "r_arm.x": -13,
+      "l_leg.x": 6, "l_knee.x": 8, "l_ankle.x": 40,
+      "r_leg.x": 6, "r_knee.x": 8, "r_ankle.x": 40
+    },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 10, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // 對頭(同 Stenver's 位置起點);CR 向頭 10°(視覺斜);中心待微調到患側 EAM 下後;SID 100;8x8 小光野
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, crTilt: -10, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // 對頭(同 Stenver's 起點);CR 真・朝頭傾 10°(crTilt,光束+機身一起斜);中心待微調到患側 EAM 下後;SID 100;8x8 小光野
     surfaceField: 0, showCross: 1,   // 十字畫在頭上(對 EAM 下後);檯面不畫
     mouthOpen: 1,                    // 張口示意(口腔深色貼花;disfigure 無下顎關節的近似)
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
@@ -1098,6 +1107,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "位置 Z (m)", -1.8, 2.1, 0.01, () => S.tube.z, v => S.tube.z = v);
   addSlider(g, "焦點高 (m)", 0.5, 2.2, 0.01, () => S.tube.h, v => S.tube.h = v);
   addSlider(g, "俯仰角(光束)", -10, 120, 1, () => S.tube.pitch, v => S.tube.pitch = v);
+  addSlider(g, "CR 朝頭傾(臥位)", -30, 30, 1, () => (S.tube.crTilt || 0), v => S.tube.crTilt = v);
   addSlider(g, "機身視覺斜", -30, 30, 1, () => (S.tube.bodyTilt || 0), v => S.tube.bodyTilt = v);
   addSlider(g, "水平旋轉", -180, 180, 1, () => S.tube.yaw, v => S.tube.yaw = v);
   addSlider(g, "光野寬 (cm)", 5, 45, 1, () => S.tube.fieldW * 100, v => S.tube.fieldW = v / 100);
@@ -1290,6 +1300,10 @@ document.getElementById("importFile").addEventListener("change", e => {
   if (q.get("dbg") === "1") uDbgPaint.value = 1;
   if (q.has("skin")) uSkinMode.value = +q.get("skin");
   if (q.has("mouth")) { uMouthOpen.value = 1; uMouthDbg.value = (q.get("mouth") === "2") ? 1 : 0; }
+  if (q.has("tubex")) S.tube.x = +q.get("tubex");
+  if (q.has("tubez")) S.tube.z = +q.get("tubez");
+  if (q.has("tubeh")) S.tube.h = +q.get("tubeh");
+  if (q.has("tubex") || q.has("tubez") || q.has("tubeh")) applyAll();
   const num = (k) => q.has(k) ? +q.get(k) : null;
   const az = num("az"), el = num("el"), dist = num("dist");
   const tx = num("tx"), ty = num("ty"), tz = num("tz");
