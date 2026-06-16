@@ -723,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw38</span><br>` +
+    `<span style="color:#7fd1ff">build sw39</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -824,6 +824,25 @@ const PRESETS = {
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.58, z: 0.55, h: 1.76, pitch: 0, crTilt: -30, bodyTilt: 0, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR 向頭 30°,對恥骨聯合下;SID 102
+    surfaceField: 1, showCross: 1,
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
+    cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
+  },
+  "dunn-view": {
+    label: "髖關節 Dunn 位(仰臥,髖屈 90°外展 20°)",
+    // SOP(positions.json dunn-view):仰臥、骨盆中立旋轉;髖屈 90°、外展 20°;
+    //   CR 垂直對 ASIS 與恥骨聯合中點;SID 100。modified Dunn = 髖屈 45°(達不到 90° 時)。
+    // ⚠️ disfigure 髖屈 55-90° 不穩會糊;先給 90° 起始,糊就降到 ~50 或改 modified 45°
+    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
+    joints: {
+      "l_arm.z": -72, "r_arm.z": -72,
+      "l_leg.x": 90, "r_leg.x": 90,    // 髖屈 90°
+      "l_leg.z": 20, "r_leg.z": 20,    // 外展 20°(同號=對稱)
+      "l_knee.x": 90, "r_knee.x": 90   // 屈膝
+    },
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: 0.54, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.30, fieldH: 0.35, beamOn: 1 },  // CR 對 ASIS–恥骨聯合中點;SID 100
     surfaceField: 1, showCross: 1,
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
