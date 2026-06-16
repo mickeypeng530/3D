@@ -723,7 +723,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw36</span><br>` +
+    `<span style="color:#7fd1ff">build sw37</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -857,7 +857,7 @@ const PRESETS = {
     // 否則 12° 在 ~0.7m 投程會把方形光野「走」到頭後檯面。
     // 使用者校正:十字落顳/臉(橫線過耳中)。SID 100(h=1.74)。
     // 12° caudad 是 CR-IR 角度(readout 記載);光束視覺維持垂直,否則 100cm 投程下 12° 會把光野走位 18cm 掉出側轉的耳。
-    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, bodyTilt: 12, yaw: 0, fieldW: 0.20, fieldH: 0.19, beamOn: 1 },  // 8x10吋;機身視覺斜 12°,光束垂直
+    tube: { x: -0.12, z: 0.57, h: 1.74, pitch: 0, crTilt: -10, bodyTilt: 0, yaw: 0, fieldW: 0.20, fieldH: 0.19, beamOn: 1 },  // 8x10吋;CR 真・向頭傾 10°(crTilt;Stenvers SOP=cephalad)
     surfaceField: 0,   // 光野只畫在頭上,檯面不要有
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.1, y: 0.86, z: 0.57, rx: 0.16, ry: 0.16, rz: 0.16 },   // 頭部影子
