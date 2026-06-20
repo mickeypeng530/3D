@@ -100,6 +100,9 @@
     <button id="btnCopy">📋 複製目前數值</button>
     <button id="btnSkin">🧑 皮膚樣式</button>
   </div>
+  <div class="btnrow">
+    <button id="btnArmFold" title="把雙手套成「屈肘交疊胸前」(只動手臂,其他部位不變;做骨盆等 view 一鍵套手)">🙆 雙手交疊</button>
+  </div>
 
   <div id="readout"></div>
 
@@ -727,7 +730,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw45</span><br>` +
+    `<span style="color:#7fd1ff">build sw46</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -1323,6 +1326,25 @@ const SKIN_NAMES = ["原本(光滑)", "陶土・軟陰影", "陶土・暖影"];
 document.getElementById("btnSkin").addEventListener("click", () => {
   uSkinMode.value = (uSkinMode.value + 1) % 3;
   toast("皮膚樣式:" + SKIN_NAMES[uSkinMode.value]);
+});
+
+// 雙手 pose 片段:一鍵套用到目前 view(只動手臂全部可動軸,不碰腿/軀幹/球管)
+const ARM_POSES = {
+  fold: {   // 屈肘交疊胸前(pelvis-frog / dunn 定版)
+    "l_arm.z": -40, "l_arm.x": 25, "l_arm.y": 52, "l_elbow.y": 113, "l_forearm.x": -4, "l_wrist.y": -3, "l_wrist.z": -25,
+    "r_arm.z": -40, "r_arm.x": 25, "r_arm.y": 52, "r_elbow.y": 113, "r_forearm.x": -4, "r_wrist.y": -3, "r_wrist.z": -25
+  }
+};
+function applyArmPose(name) {
+  const p = ARM_POSES[name];
+  if (!p) return;
+  for (const [path, v] of Object.entries(p)) setJoint(path, v);
+  applyAll();
+  syncSliders();
+}
+document.getElementById("btnArmFold").addEventListener("click", () => {
+  applyArmPose("fold");
+  toast("已套用雙手交疊(只動手臂)");
 });
 
 // 控制面板:收合 / 還原
