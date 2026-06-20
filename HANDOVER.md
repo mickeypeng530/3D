@@ -2,10 +2,11 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-50:骨盆群 + Stenvers + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~21)
-- 🔑 **sw50 影子偏病人一側 → beamShadow 1 修正**:`beamShadow 0` 時 sun 用預設 `room(0,12,6)`,那個 **z=6 在臥位(轉房間)= 病人左右(橫)軸**,所以 sun 偏到一側 → 影子投到對側(使用者回報「偏病人左邊」)。臥位垂直 CR 的 view 一律開 `beamShadow 1`(sun 對齊垂直光束=正上方)→ 影子對稱收身體下。已套 pelvis-in-let。
-  - ⚠️⚠️ **localStorage override 蓋掉 preset 修正的陷阱**:使用者貼的數值仍是 crTilt 40 / SID 133(舊值),代表他之前按過「💾 存到此 view」,`applyPreset` 末端 `loadOverride()` 把 `ovr_pelvis-in-let` 舊值套回、蓋掉新 preset。**改 preset 後要叫使用者按「↺ 還原此 view」清掉 localStorage 覆寫**(或無痕),否則永遠看到舊的。
-- 🔑 **sw49 大角度 CR 改用 bodyTilt(光野對位修正)**:`crTilt`(真・光束傾)在**大角度**會讓光野/十字沿斜光束走位 ≈ SID×tan(θ),且 SID 膨脹 = 真SID/cos(θ)。例:inlet crTilt 40° → 光野跑 ~84cm 掉離骨盆、SID 100→133。**解法**:大角度改 `bodyTilt`(只斜機身外觀、光束維持垂直)→ 光野準確置中部位、SID 正確、readout 仍顯示 CR 角(`crDeg = pitch + bodyTilt`)。已套到 `pelvis-in-let`(bodyTilt 40)。⚠️ **`pelvis-out-let` 還是 crTilt -30,有同樣走位問題,待改 bodyTilt -30**。小角度(Stenvers 10°)走位 ~18cm 可用 tube.x 補,真 crTilt 仍可;>~20° 一律走 bodyTilt。
+## sw34-51:骨盆群 + Stenvers + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~21)
+- 🔑 **sw49-51 pelvis-in-let:真 crTilt 40°(別擅自改 bodyTilt!)**:使用者**刻意要呈現真實 40° 斜光束**(入口位角度是重點)。真斜會讓光野沿斜光束走位 ≈ SID×tan(40)≈84cm,使用者自己把 `tube.x` 移到 **-0.24** 把光野對回骨盆 → 定版 = `crTilt 40 + tube.x -0.24`。SID readout ~133 = 真SID/cos40(斜射光程),正常、不要去「修」。
+  - ⚠️ **我犯過的錯(sw49/50)**:擅自把 crTilt 40 換成 bodyTilt(假機身斜、光束變垂直)+ 把球管移回 0.54,等於拆掉使用者要的真斜光束 → 被打槍,已 sw51 全部還原。**教訓:使用者貼的數值原封回填,別自作主張「優化」掉他的刻意設計(見 memory feedback-paste-values-verbatim)。** bodyTilt 路線只適合使用者沒意見、且想隱藏走位時。
+  - ⏳ **影子偏病人左邊(未解,待使用者決定)**:`beamShadow 0` 時 sun 用預設 `room(0,12,6)`,z=6 在臥位 = 病人左右橫軸 → sun 偏一側 → 影偏對側。試過 `beamShadow 1` 只是把影翻到另一側(因 sun 改跟 40° 斜束),沒置中。乾淨解需「sun 正上方但光束維持 40°斜」= sun 與 beam 解耦,尚未做。先別硬改。
+  - ⚠️⚠️ **localStorage override 陷阱**:使用者貼的數值若跟你改的 preset 不符(如仍 crTilt40/SID133),多半他之前按過「💾 存到此 view」,`applyPreset` 末端 `loadOverride()` 把 `ovr_<view>` 舊值套回蓋掉新 preset。**改 preset 後要叫使用者按「↺ 還原此 view」清 localStorage**(或無痕)。
 - **sw48 dunn-45 使用者定版**:fig.z 0.86 + waist.x 1 + 膝屈 86/小腿旋 -35/足背屈 45,雙腳平貼檯面;交疊手臂、髖屈 45 外展 20 不變。
 - **sw47 新 `dunn-45`(Modified Dunn)preset**:= 標準 dunn-view 只把髖屈 90→45(`leg.x 45`),其餘全同(外展 20、交疊手臂、tube/CR/SID、surfaceField0、beamShadow1)。SOP 來源 positions.json dunn-view variants(髖屈 45°,無法達 90° 時採此)。骨盆不動 → CR/tube 同 dunn-view。**髖屈 45° < 55° 在 disfigure 穩定區,腿不糊**(比 Dunn 90 乾淨)。起始姿勢,待使用者微調膝/足角度。
 - **sw46 「🙆 雙手交疊」pose 片段鈕**:一鍵把雙臂套成屈肘交疊胸前(只動手臂全部可動軸,不碰腿/軀幹/球管),做骨盆等 view 時快速套手。機制 = `ARM_POSES.fold` 字典 + `applyArmPose(name)`(setJoint 每軸 → applyAll → syncSliders)。**要加新 pose 片段就往 `ARM_POSES` 加一筆 + 一顆鈕。** 值來源 = pelvis-frog/dunn 定版手臂。
