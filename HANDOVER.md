@@ -1,6 +1,6 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-15(新增 Styloid 莖突 view + 臥位真・CR 朝頭傾 crTilt + 張口示意貼花,build sw33)
+> 最後更新:2026-06-20(新增 §6 新 view 製作 SOP;上一版 build sw33:Styloid 莖突 view + 臥位真・CR 朝頭傾 crTilt + 張口示意貼花)
 
 ## sw27-33:Styloid(莖突)view + 新機制
 - **新 view `styloid`**(莖突,俯臥側位;SOP 見 `Xray/positions.json` styloid-temporal-styloid-process):俯臥、頭轉近側位(head.y~68)、左臂屈肘上抬手貼桌近頭、CR 朝頭傾 10°、對患側 EAM 下後。**使用者定版數值已寫進 preset**(sw33,tube x0.05/z0.55,crTilt -10)。
@@ -158,3 +158,21 @@
 - 加 preset:複製 `PRESETS` 一筆,joints 用路徑語法;先在 console 用 `__sim.setJoint()` / `__sim.S` 調好再回填
 - 主站缺照清單:見 `..\Xray\positions.json`(47 筆 `images.positioning_photo` 為空者);出圖優先序:已 reviewed 10 筆 → 骨盆/髖/腹部隱私群 → 其餘
 - 部署:push main → GitHub Pages(repo Settings → Pages 啟用 main / root)
+
+## 6. 新 view 製作 SOP(沒做過的 view 照這份走)
+
+> 任何新 session 開工前先讀這段。每一步都有對應的「為什麼/坑」連回上面章節。
+
+1. **選 view** — 從 `..\Xray\positions.json` 缺照清單挑(`images.positioning_photo` 為空者,共 47 筆;**已 reviewed 的優先**)。出圖優先序見 §5。
+2. **查擺位 SOP** — 讀該 view 的擺位規範(positions.json 內文 / 主站),先定下:**體位**(站/仰臥/俯臥)、**CR 入點 + 角度**、**SID(cm)**、**光野寬高(cm)**、是否需要十字/光野畫在皮膚上。
+3. **起環境** — `python -m http.server 8765 --directory .`(或 preview config `sim3d`);背景跑 `python tools/shot_server.py 8766` 當截圖管道。
+4. **選基礎模板**(複製 `PRESETS` 最接近的一筆改):
+   - **站位**:fig 站立、`rotY` 決定面向(0/180=側位貼板,180=面向壁架)。
+   - **臥位**:`room:{lie:1, ox, oy, oz}`「人不動、轉房間」(§4 🔑🔑),人偶維持站立關節語意正常;臥位朝頭傾用 `crTilt`(§sw30)。
+   - **俯臥**:仰臥 preset 把 `fig.rotY` 設 180、頭轉用 `head.y`。
+5. **調 pose** — console `__sim.setJoint()`/`__sim.S` 或 UI 滑桿,設 fig 位置、關節、`tube`(x/z/h/pitch)、`crTilt`、SID、光野寬高、`surfaceField`/`showCross`。**關節務必查 §4 軸位圖**(很多軸被鎖死、左右對稱用「同號」),新增滑桿前先寫入讀回驗證。
+6. **截圖檢查** — headless Chrome(§「headless」段,首幀偶爾全白要重試到 >40KB)或 preview 截圖管道(canvas 常變 1px,先 setSize 再拍)。
+7. **使用者微調 → 回填** — 使用者自己用滑桿調好後 **📋 複製數值 → 原封不動寫回 PRESET**。⚠️ **絕不自作主張改 pose**(memory `feedback-paste-values-verbatim`):手調整體判斷一定優於 Claude 單規則+靜態截圖。
+8. ⚠️ **applyPreset 白名單** — 若這個 view 用到**新的 per-preset 欄位**,一定要在 `applyPreset` 補一行複製到 `S`,否則 fresh load 會失效(只靠殘留狀態僥倖)。
+9. **發佈** — build 號 +1(applyAll 末端 readout)→ `git commit + push main` → GitHub Pages 約 1-2 分鐘部署 → 叫使用者**無痕視窗或 `?v=<號>`** 破快取確認看到新版。
+10. **定稿鎖定** — 使用者拍板後存 `samples/<view>_final.png`(官方參考圖)+ 回填主站 `..\Xray\positions.json` 的 `images.positioning_photo`(編輯歸屬用 "C",見 memory `reference_xray_admin_name`)。
