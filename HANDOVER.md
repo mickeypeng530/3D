@@ -1,6 +1,15 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-20(新增 §6 新 view 製作 SOP;上一版 build sw33:Styloid 莖突 view + 臥位真・CR 朝頭傾 crTilt + 張口示意貼花)
+> 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
+
+## sw34-40:骨盆群 + Stenvers 定版 + Dunn(2026-06-15~20 從 git log 反查補錄)
+- **sw34-35 `pelvis-frog`(骨盆蛙式)**:新 view,仰臥蛙腿。**使用者定版**:雙臂屈肘交疊胸前 + 雙腿蛙腿(髖屈 `leg.x 27`、外旋 `thigh.y 45`、外展 `leg.z 40`、膝屈 `knee.x 92`、足內翻併攏 `ankle.x 35/ankle.z -20`)、`fig.z 0.88`、`surfaceField:1`。SOP(reviewed):兩 ASIS 等高不旋轉、CR 垂直對恥骨聯合上 2.5cm、SID 102。⚠️ 外傷/疑髖骨折禁蛙位。
+- **sw36 `pelvis-in-let` / `pelvis-out-let`(骨盆入口/出口位)**:新 2 views,首次用 **真・CR 角度 `crTilt`** 而非機身假斜。腿直、雙足內旋 15°(`thigh.y -15` 同號)、骨盆不旋轉。
+  - 🔑 **crTilt 符號慣例(臥位)**:**正 = 向腳側 caudad、負 = 向頭側 cephalad**。Inlet `crTilt +40`(向腳,對 ASIS 中央,看骨盆環前後位移);Outlet `crTilt -30`(向頭,對恥骨聯合下,看恥骨上下支;男 20-35/女 30-45)。SID 102。
+  - ⚠️ 鍵名刻意寫 `pelvis-in-let`/`pelvis-out-let`(夾 `-` 切開),不是 `pelvis-inlet`——grep 找不到時注意。
+- **sw37-38 `skull-stenvers` 改真斜 + 使用者定版**:① sw37 把 stenvers 從「機身視覺斜 `bodyTilt`」改成 **真・`crTilt -10`**(光束真的朝頭傾,十字往枕部移;SOP 本就是 cephalad,使用者選真斜)。② sw38 使用者定版:`head.x 4 / head.y 45(面轉對側)/ chest.x 2`、雙臂上抬近頭微屈肘(`arm.z -90, x -15, y -32, elbow.y 10`)、`fig.z 0.81`、`tube.x 0.02 z 0.57 h 1.74`、`crTilt -10`、光野 20×19、`surfaceField:0`(光野只畫頭上)。**注意**:`skull-stenvers-arcelin`(仰臥替代)仍用舊的 `bodyTilt:12`(機身假斜),沒跟著改 crTilt。
+- **sw39 `dunn-view`(髖 Dunn 位)**:新 view,仰臥髖屈 90° + 外展 20°(`leg.x 90, leg.z 20, knee.x 90` 同號)、CR 垂直對 ASIS–恥骨聯合中點、SID 100。modified Dunn = 髖屈 45°(disfigure 髖屈 55-90° 會糊,糊就降到 ~50)。
+- **sw40 `dunn-view` 加 `beamShadow:1`**:蛙腿抬高擋斜射 sun → 腿間積硬黑影 + 長斜影。CR 垂直(pitch 0)→ beamShadow 對齊光束 = 正上方打光,影子收到身體正下方。對照圖 `shots/dunn_before|after|foot.png`。**同類修法**:任何「抬腿/抬手 + 仰臥垂直 CR」view 若腿/臂間積黑影,優先加 `beamShadow:1`。
 
 ## sw27-33:Styloid(莖突)view + 新機制
 - **新 view `styloid`**(莖突,俯臥側位;SOP 見 `Xray/positions.json` styloid-temporal-styloid-process):俯臥、頭轉近側位(head.y~68)、左臂屈肘上抬手貼桌近頭、CR 朝頭傾 10°、對患側 EAM 下後。**使用者定版數值已寫進 preset**(sw33,tube x0.05/z0.55,crTilt -10)。
@@ -50,7 +59,7 @@
 
 ## 0. 接手起點(先讀這段)
 
-**現在手上在做:`cspine-swimmers`(頸椎泳姿位)的「皮膚十字/光野 + 質感」微調**,線上版 build 號 `sw26`(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=26`)。
+**線上版 build 號 `sw40`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=40`)。最近完成:Dunn 位腿間黑影修正(sw40 加 `beamShadow:1`)、骨盆蛙式/入口/出口位、Stenvers 真斜定版(見頂部 sw34-40 區塊)。早期 `cspine-swimmers` 皮膚十字/光野微調歷史見 §2 與下方 swNN 細節。
 
 **目前著色模型(看 §2 swimmer 條與下方各 swNN 演進細節,這裡只給結論)**:
 - **皮膚十字/光野**:用 TSL `beamPaint`,**身體**畫光野亮區+十字、**承光面(X光板)**只畫柔光野+sun 柔影(無投影十字)。`beamPaint` 用 `if(onSurface)` 編譯期分支。
@@ -67,7 +76,7 @@
 - **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
 - **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
 - **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw14 用「facing 收緊到 smoothstep(0.30,0.62) + 各向異性橢球閘(r 窄/ry 高)」解掉(根因見上方 §0 sw14 段),**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
-- **大方向待辦**:`..\Xray\positions.json` 還有 47 筆缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、stenvers、arcelin、caldwells、waters、(swimmers 待確認)。
+- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、stenvers、arcelin、caldwells、waters、styloid、(swimmers 待確認)。線上 build = **sw40**(§0 / readout)。
 
 
 ## 1. 這專案在做什麼
