@@ -190,7 +190,7 @@
 7. **使用者微調 → 回填** — 使用者自己用滑桿調好後 **📋 複製數值 → 原封不動寫回 PRESET**。⚠️ **絕不自作主張改 pose**(memory `feedback-paste-values-verbatim`):手調整體判斷一定優於 Claude 單規則+靜態截圖。
 8. ⚠️ **applyPreset 白名單** — 若這個 view 用到**新的 per-preset 欄位**,一定要在 `applyPreset` 補一行複製到 `S`,否則 fresh load 會失效(只靠殘留狀態僥倖)。
 9. **發佈** — build 號 +1(applyAll 末端 readout)→ `git commit + push main` → GitHub Pages 約 1-2 分鐘部署 → 叫使用者**無痕視窗或 `?v=<號>`** 破快取確認看到新版。
-10. **出圖蓋章(finalize)** — 渲染高解析終圖(headless 大 window-size,hud=0)→ 跑 `python tools/seal_stamp.py <終圖路徑> br 0.025` → 出 `shots/sealed_<name>.png`:右下蓋 SP 作者印章(`Xray/assets/SP-seal-ink.png`)+ 底部 banner「亞東醫院影像科 · 教學用途 · <今天日期>」。⚠️ **banner 不含「AI 修飾」**(上傳主站時會自動加,蓋章端不重複;`WM` 字串已拿掉)。**script 不上傳**(對好位置後另用 firebase-admin 上傳)。`seal_stamp.py` 吃本機檔或 view_id(view_id 會從 Firestore 抓 positioning_photo);角落 `br/bl/tr/tl`、`frac`=印章佔對角線比例。舊版純文字浮水印是 `tools/watermark.py`。
+10. **出圖蓋章(finalize)** — 渲染高解析終圖(headless 大 window-size,hud=0)→ 跑 `python tools/seal_stamp.py <終圖路徑> br 0.025` → 出 `shots/sealed_<name>.png`:**只在右下蓋 SP 作者印章**(`Xray/assets/SP-seal-ink.png`),**不加底部 banner**。⚠️ banner(亞東醫院 · 教學用途 · 日期 · AI 修飾)**由主站上傳流程自動加**,蓋章端不要重複(`main` 已拿掉 `add_banner` 呼叫;`crop_banner` 仍會裁掉來源若有的舊 banner)。**script 不上傳**(對好位置後另用 firebase-admin 上傳)。`seal_stamp.py` 吃本機檔或 view_id(view_id 會從 Firestore 抓 positioning_photo);角落 `br/bl/tr/tl`、`frac`=印章佔對角線比例。舊版純文字浮水印是 `tools/watermark.py`。
 11. **定稿鎖定** — 使用者拍板後 + 回填主站 `..\Xray\positions.json` 的 `images.positioning_photo`(編輯歸屬用 "C",見 memory `reference_xray_admin_name`)。
 
 > ⚠️ **`tools/seal_stamp.py` 目前未進 git**(內含 Firebase API key + 個人路徑,repo 為公開 GitHub Pages → 刻意不提交)。流程靠這份 HANDOVER 記錄;工具在本機 `tools/`。`shots/` 已 gitignore,`sealed_*.png` 不會被推。
