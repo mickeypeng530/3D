@@ -2,7 +2,9 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-47:骨盆群 + Stenvers 定版 + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~20)
+## sw34-49:骨盆群 + Stenvers + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~21)
+- 🔑 **sw49 大角度 CR 改用 bodyTilt(光野對位修正)**:`crTilt`(真・光束傾)在**大角度**會讓光野/十字沿斜光束走位 ≈ SID×tan(θ),且 SID 膨脹 = 真SID/cos(θ)。例:inlet crTilt 40° → 光野跑 ~84cm 掉離骨盆、SID 100→133。**解法**:大角度改 `bodyTilt`(只斜機身外觀、光束維持垂直)→ 光野準確置中部位、SID 正確、readout 仍顯示 CR 角(`crDeg = pitch + bodyTilt`)。已套到 `pelvis-in-let`(bodyTilt 40)。⚠️ **`pelvis-out-let` 還是 crTilt -30,有同樣走位問題,待改 bodyTilt -30**。小角度(Stenvers 10°)走位 ~18cm 可用 tube.x 補,真 crTilt 仍可;>~20° 一律走 bodyTilt。
+- **sw48 dunn-45 使用者定版**:fig.z 0.86 + waist.x 1 + 膝屈 86/小腿旋 -35/足背屈 45,雙腳平貼檯面;交疊手臂、髖屈 45 外展 20 不變。
 - **sw47 新 `dunn-45`(Modified Dunn)preset**:= 標準 dunn-view 只把髖屈 90→45(`leg.x 45`),其餘全同(外展 20、交疊手臂、tube/CR/SID、surfaceField0、beamShadow1)。SOP 來源 positions.json dunn-view variants(髖屈 45°,無法達 90° 時採此)。骨盆不動 → CR/tube 同 dunn-view。**髖屈 45° < 55° 在 disfigure 穩定區,腿不糊**(比 Dunn 90 乾淨)。起始姿勢,待使用者微調膝/足角度。
 - **sw46 「🙆 雙手交疊」pose 片段鈕**:一鍵把雙臂套成屈肘交疊胸前(只動手臂全部可動軸,不碰腿/軀幹/球管),做骨盆等 view 時快速套手。機制 = `ARM_POSES.fold` 字典 + `applyArmPose(name)`(setJoint 每軸 → applyAll → syncSliders)。**要加新 pose 片段就往 `ARM_POSES` 加一筆 + 一顆鈕。** 值來源 = pelvis-frog/dunn 定版手臂。
 - **sw44-45 dunn-view 定版**:sw44 `surfaceField 0`(檯面光野關);sw45 雙臂改交疊胸前(沿用 pelvis-frog 手臂數據)。複製數值原封回填。

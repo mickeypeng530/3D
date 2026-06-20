@@ -730,7 +730,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw48</span><br>` +
+    `<span style="color:#7fd1ff">build sw49</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -806,14 +806,18 @@ const PRESETS = {
     label: "骨盆入口位 Pelvis Inlet(仰臥,CR 向腳 40°)",
     // 本院 SOP(reviewed):仰臥、腿直、雙足併攏內旋 15°、骨盆不旋轉;
     //   CR 向腳側 40°(caudad)、對兩 ASIS 連線中央;SID 102。看骨盆環前後位移。
-    // 臥位 CR 向腳傾 = crTilt 正值(向頭=負);足內旋用 thigh.y 同號
-    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
-    joints: {
-      "l_arm.z": -72, "r_arm.z": -72,
-      "l_thigh.y": -15, "r_thigh.y": -15   // 足內旋 15°(腿直、併攏、無外展)
+    // ⚠️ 大角度 CR(40°)用「視覺機身斜 bodyTilt」+ 光束垂直,不用真 crTilt:
+    //   crTilt 40 真斜會讓光野沿斜光束走位 ~SID×tan40 ≈ 84cm 掉離骨盆,且 SID 膨脹到 100/cos40 ≈ 130。
+    //   bodyTilt 只斜機身外觀(光束不動)→ 光野準確置中骨盆、SID 正確、readout 仍顯示 CR 40°。足內旋用 thigh.y 同號。
+    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },   // 使用者定版
+    joints: {   // 使用者定版:交疊手臂 + 腿直、足內旋、微外展
+      "l_arm.z": -40, "l_arm.x": 25, "l_arm.y": 52, "l_elbow.y": 113, "l_forearm.x": -4, "l_wrist.y": -3, "l_wrist.z": -25,
+      "r_arm.z": -40, "r_arm.x": 25, "r_arm.y": 52, "r_elbow.y": 113, "r_forearm.x": -4, "r_wrist.y": -3, "r_wrist.z": -25,
+      "l_thigh.y": -15, "l_leg.z": 4, "l_shin.y": -15,
+      "r_thigh.y": -15, "r_leg.z": 4, "r_shin.y": -15
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: 0.52, z: 0.55, h: 1.76, pitch: 0, crTilt: 40, bodyTilt: 0, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR 向腳 40°,對 ASIS 中央;SID 102
+    tube: { x: 0.54, z: 0.55, h: 1.76, pitch: 0, crTilt: 0, bodyTilt: 40, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR caudad 40° = bodyTilt 視覺斜(光束垂直);對 ASIS 中央;SID 102
     surfaceField: 1, showCross: 1,
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
