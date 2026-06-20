@@ -2,7 +2,8 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-42:骨盆群 + Stenvers 定版 + Dunn + 陰影控制滑桿(2026-06-15~20 從 git log 反查補錄)
+## sw34-43:骨盆群 + Stenvers 定版 + Dunn + 陰影控制(2026-06-15~20 從 git log 反查補錄)
+- 🔑 **sw43 根除「第二道淡影」(綠色假腿影)**:disfigure 內建世界光 `light`(我們壓到 0.25)+ `cameraLight` 原本 **castShadow 沒關** → 它們在世界座標固定不動,各投一道淡影。Dunn 抬腿時這道固定淡影看起來像「第二雙伸直的腿」(綠),且**不受 `shadowLift` 影響**(shadowLift 只動 ROOMG 內的 `sun`)——使用者精準回報「陰影光角動的是紅、淡綠不變」才定位到。**解法**:`light.castShadow=false; cameraLight.castShadow=false`([index.html:351](index.html))→ 全場只剩 `sun` 一道可控影。⚠️ 教訓:任何 fill/ambient 性質的光都要 `castShadow=false`,只留主光投影,否則多重淡影疊加很難 debug。
 - **sw42 陰影控制滑桿**(UI「光線」群):①「**陰影濃度**」→ `sun.shadow.intensity`(0=無影 1=全黑,預設 0.4)。②「**陰影光角(臥位)**」→ `S.tube.shadowLift`(per-view,-12~12)。⚠️ `shadow.radius` 柔邊在 WebGPU **無效**(已移除)——所以 sw41 只把綠條變淡、形狀沒柔化(使用者回報「綠色沒變」)。真正消綠條靠 `shadowLift`:把 sun 往房間 z(檯面法線)推,beamShadow 的直射掠射→斜射,抬腿長影收短。`shadowLift` 放在 `S.tube` 內(applyPreset `Object.assign(S.tube,p.tube)` 自動帶;已加 `S.tube.shadowLift=0` 歸零行)。**使用者要自己拉滑桿定值再回填 preset。**
 - **sw41 全域陰影柔化**:`sun.shadow.intensity 0.4`(WebGPU 有吃)。場景只有一盞硬 `sun` 投影、無補光 → 硬黑影。Dunn 因 sw40 `beamShadow` 把 sun 變近乎掠射檯面,抬起的腿被拖出又長又硬的條狀影(像第二雙伸直的腿)。降濃度讓紅(彎腿影)變淡;綠(掠射長條)的形狀要靠 sw42 `shadowLift` 改光角才收得掉。
 - **sw34-35 `pelvis-frog`(骨盆蛙式)**:新 view,仰臥蛙腿。**使用者定版**:雙臂屈肘交疊胸前 + 雙腿蛙腿(髖屈 `leg.x 27`、外旋 `thigh.y 45`、外展 `leg.z 40`、膝屈 `knee.x 92`、足內翻併攏 `ankle.x 35/ankle.z -20`)、`fig.z 0.88`、`surfaceField:1`。SOP(reviewed):兩 ASIS 等高不旋轉、CR 垂直對恥骨聯合上 2.5cm、SID 102。⚠️ 外傷/疑髖骨折禁蛙位。

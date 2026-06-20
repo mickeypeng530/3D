@@ -348,8 +348,8 @@ sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
 sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
 ROOMG.add(sun);
 ROOMG.add(sun.target);
-if (light) light.intensity = 0.25;   // 壓低 disfigure 的世界座標主光
-if (cameraLight) cameraLight.intensity = 0.5;   // 相機跟隨光壓低(預設 1.4 會在板面打出圓形亮斑)
+if (light) { light.intensity = 0.25; light.castShadow = false; }   // 壓低 disfigure 世界主光 + 關它的投影(否則它在世界座標固定不動,投出第二道淡影=「綠色」假腿影,還不受 shadowLift 影響)
+if (cameraLight) { cameraLight.intensity = 0.5; cameraLight.castShadow = false; }   // 相機跟隨光壓低 + 不投影(避免影子隨相機跑)
 
 /* ============================================================
    材質與幾何 helper
@@ -727,7 +727,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw42</span><br>` +
+    `<span style="color:#7fd1ff">build sw43</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
