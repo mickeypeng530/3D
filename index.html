@@ -730,7 +730,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw49</span><br>` +
+    `<span style="color:#7fd1ff">build sw50</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -818,7 +818,7 @@ const PRESETS = {
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.54, z: 0.55, h: 1.76, pitch: 0, crTilt: 0, bodyTilt: 40, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR caudad 40° = bodyTilt 視覺斜(光束垂直);對 ASIS 中央;SID 102
-    surfaceField: 1, showCross: 1,
+    surfaceField: 1, showCross: 1, beamShadow: 1,   // beamShadow 1:sun 對齊垂直光束=正上方,影子左右對稱(預設 sun room z=6 偏移會讓影偏病人一側)
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
