@@ -730,7 +730,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw47</span><br>` +
+    `<span style="color:#7fd1ff">build sw48</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -860,14 +860,14 @@ const PRESETS = {
     label: "髖關節 Dunn 45 位(modified,仰臥,髖屈 45°外展 20°)",
     // SOP(positions.json dunn-view variants):仰臥、骨盆中立不旋轉;髖屈 45°(無法達 90° 時採此)、外展 20°;
     //   CR 垂直對 ASIS–恥骨聯合中點;SID 100。= 標準 Dunn 只把髖屈 90→45;骨盆不動 → tube/CR 同 dunn-view。
-    //   髖屈 45° < 55°,在 disfigure 穩定區,理論上比 Dunn 90 更不糊。起始姿勢,待使用者微調。
-    fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
-    joints: {
+    //   髖屈 45° < 55°,在 disfigure 穩定區,比 Dunn 90 更不糊。使用者定版。
+    fig: { x: 0, z: 0.86, y: 0, rotY: 0, rotZ: 0 },   // 使用者定版
+    joints: {   // 使用者定版:交疊手臂 + 髖屈45/外展20/膝屈86/小腿旋-35/足背屈45
+      "waist.x": 1,
       "l_arm.z": -40, "l_arm.x": 25, "l_arm.y": 52, "l_elbow.y": 113, "l_forearm.x": -4, "l_wrist.y": -3, "l_wrist.z": -25,
-      "r_arm.z": -40, "r_arm.x": 25, "r_arm.y": 52, "r_elbow.y": 113, "r_forearm.x": -4, "r_wrist.y": -3, "r_wrist.z": -25,   // 雙臂屈肘交疊胸前
-      "l_leg.x": 45, "r_leg.x": 45,    // 髖屈 45°(modified)
-      "l_leg.z": 20, "r_leg.z": 20,    // 外展 20°(同號=對稱)
-      "l_knee.x": 90, "r_knee.x": 90   // 屈膝
+      "r_arm.z": -40, "r_arm.x": 25, "r_arm.y": 52, "r_elbow.y": 113, "r_forearm.x": -4, "r_wrist.y": -3, "r_wrist.z": -25,
+      "l_leg.x": 45, "l_leg.z": 20, "l_knee.x": 86, "l_shin.y": -35, "l_ankle.x": 45, "l_ankle.z": -5,
+      "r_leg.x": 45, "r_leg.z": 20, "r_knee.x": 86, "r_shin.y": -35, "r_ankle.x": 45, "r_ankle.z": -5
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.54, z: 0.55, h: 1.78, pitch: 0, yaw: 0, fieldW: 0.30, fieldH: 0.35, beamOn: 1 },  // CR 對 ASIS–恥骨聯合中點;SID 100
