@@ -3,7 +3,7 @@
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
 ## sw34-52:骨盆群 + Stenvers + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~21)
-- 🔑 **sw49-52 pelvis-in-let:真 crTilt 40°(別擅自改 bodyTilt!)**:使用者**刻意要呈現真實 40° 斜光束**(入口位角度是重點)。真斜會讓光野沿斜光束走位 ≈ SID×tan(40)≈84cm,使用者自己把 `tube.x` 移到 **-0.24** 把(身體上的)十字對回骨盆 → 定版 = `crTilt 40 + tube.x -0.24`。SID readout ~133 = 真SID/cos40(斜射光程),正常、不要去「修」。
+- 🔑 **sw49-52 pelvis-in-let:真 crTilt 40°(別擅自改 bodyTilt!)**:使用者**刻意要呈現真實 40° 斜光束**(入口位角度是重點)。真斜會讓光野沿斜光束走位 ≈ SID×tan(40)≈84cm,使用者自己移球管把十字對回骨盆 → **定版(sw53)= `crTilt 40 + tube.x -0.04 + h 1.52(SID 102)+ fieldW 0.31 + surfaceField 1 + shadowOverhead 1`**。關鍵:把球管**降低(h 1.52)**讓投程變短 → 檯面光野走位變小、亮斑回到骨盆,所以 surfaceField 可以開回 1。早期 h 1.76 投程長才走位 84cm/SID 133。
   - ✅ **sw52「照到腳」修正 = `surfaceField 0`**:`surfaceField 1` 時檯面那塊亮光野被 40° 斜束投到偏腳側,看起來像「光束照到腳」;身體上的十字其實在骨盆。關掉檯面光野(surfaceField 0)那塊腳側亮斑就消失。**不要動光束/球管**——使用者明確說機身光束是對的,只是落點亮斑要修。
   - ✅ **sw52 影子置中 = `S.tube.shadowOverhead`(sun 與光束解耦)**:新旗標。開啟時 sun 沿『垂直參考光束』(忽略 crTilt 斜角)打,影子置中身體下、不偏側,**完全不動真實斜光束**。實作在 applyAll sun 分支(在 beamShadow 之前)。applyPreset 已加 `S.tube.shadowOverhead=0` 歸零。⚠️ `beamShadow 1` 對斜束 view **不行**(sun 改跟 40° 斜束 → 影只翻到另一側);要置中影又保留斜束就用 shadowOverhead。
   - ⚠️ **我犯過的錯(sw49/50)**:擅自把 crTilt 40 換成 bodyTilt + 移球管,拆掉使用者要的真斜光束 → 打槍 sw51 還原。**教訓:使用者貼的數值原封回填,別自作主張「優化」掉他的刻意設計(memory feedback-paste-values-verbatim)。**
