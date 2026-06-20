@@ -2,7 +2,8 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-40:骨盆群 + Stenvers 定版 + Dunn(2026-06-15~20 從 git log 反查補錄)
+## sw34-41:骨盆群 + Stenvers 定版 + Dunn + 陰影柔化(2026-06-15~20 從 git log 反查補錄)
+- **sw41 全域陰影柔化**:`sun.shadow.intensity 0.4`(WebGPU 有吃)+ `sun.shadow.radius 6`([index.html:347](index.html))。場景只有一盞硬 `sun` 投影、無補光 → 硬黑影。Dunn 因 sw40 `beamShadow` 把 sun 變近乎掠射檯面,抬起的腿被拖出又長又硬的條狀影(看起來像第二雙伸直的腿)。降濃度+柔邊後紅(彎腿影)變淡、綠(掠射長條)柔化到不再像腿。**全域**:所有 view 硬影一起變柔(swimmer 等已定版檢查過 OK)。要更實/更虛調 `shadow.intensity`(0=無影、1=全黑)。
 - **sw34-35 `pelvis-frog`(骨盆蛙式)**:新 view,仰臥蛙腿。**使用者定版**:雙臂屈肘交疊胸前 + 雙腿蛙腿(髖屈 `leg.x 27`、外旋 `thigh.y 45`、外展 `leg.z 40`、膝屈 `knee.x 92`、足內翻併攏 `ankle.x 35/ankle.z -20`)、`fig.z 0.88`、`surfaceField:1`。SOP(reviewed):兩 ASIS 等高不旋轉、CR 垂直對恥骨聯合上 2.5cm、SID 102。⚠️ 外傷/疑髖骨折禁蛙位。
 - **sw36 `pelvis-in-let` / `pelvis-out-let`(骨盆入口/出口位)**:新 2 views,首次用 **真・CR 角度 `crTilt`** 而非機身假斜。腿直、雙足內旋 15°(`thigh.y -15` 同號)、骨盆不旋轉。
   - 🔑 **crTilt 符號慣例(臥位)**:**正 = 向腳側 caudad、負 = 向頭側 cephalad**。Inlet `crTilt +40`(向腳,對 ASIS 中央,看骨盆環前後位移);Outlet `crTilt -30`(向頭,對恥骨聯合下,看恥骨上下支;男 20-35/女 30-45)。SID 102。

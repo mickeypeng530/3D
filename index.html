@@ -343,6 +343,8 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.1);
 sun.position.set(0, 12, 6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.intensity = 0.4;   // 壓淡所有投影濃度(避免硬黑影;紅淡、綠掠射條也變很淡)
+sun.shadow.radius = 6;        // 柔化陰影邊緣(掠射長條變柔不再像一條腿)
 sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
 sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
 ROOMG.add(sun);
@@ -723,7 +725,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw40</span><br>` +
+    `<span style="color:#7fd1ff">build sw41</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
