@@ -2,7 +2,8 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-46:骨盆群 + Stenvers 定版 + Dunn + 陰影控制 + pose 片段鈕(2026-06-15~20)
+## sw34-47:骨盆群 + Stenvers 定版 + Dunn(90/45)+ 陰影控制 + pose 片段鈕(2026-06-15~20)
+- **sw47 新 `dunn-45`(Modified Dunn)preset**:= 標準 dunn-view 只把髖屈 90→45(`leg.x 45`),其餘全同(外展 20、交疊手臂、tube/CR/SID、surfaceField0、beamShadow1)。SOP 來源 positions.json dunn-view variants(髖屈 45°,無法達 90° 時採此)。骨盆不動 → CR/tube 同 dunn-view。**髖屈 45° < 55° 在 disfigure 穩定區,腿不糊**(比 Dunn 90 乾淨)。起始姿勢,待使用者微調膝/足角度。
 - **sw46 「🙆 雙手交疊」pose 片段鈕**:一鍵把雙臂套成屈肘交疊胸前(只動手臂全部可動軸,不碰腿/軀幹/球管),做骨盆等 view 時快速套手。機制 = `ARM_POSES.fold` 字典 + `applyArmPose(name)`(setJoint 每軸 → applyAll → syncSliders)。**要加新 pose 片段就往 `ARM_POSES` 加一筆 + 一顆鈕。** 值來源 = pelvis-frog/dunn 定版手臂。
 - **sw44-45 dunn-view 定版**:sw44 `surfaceField 0`(檯面光野關);sw45 雙臂改交疊胸前(沿用 pelvis-frog 手臂數據)。複製數值原封回填。
 - 🔑 **sw43 根除「第二道淡影」(綠色假腿影)**:disfigure 內建世界光 `light`(我們壓到 0.25)+ `cameraLight` 原本 **castShadow 沒關** → 它們在世界座標固定不動,各投一道淡影。Dunn 抬腿時這道固定淡影看起來像「第二雙伸直的腿」(綠),且**不受 `shadowLift` 影響**(shadowLift 只動 ROOMG 內的 `sun`)——使用者精準回報「陰影光角動的是紅、淡綠不變」才定位到。**解法**:`light.castShadow=false; cameraLight.castShadow=false`([index.html:351](index.html))→ 全場只剩 `sun` 一道可控影。⚠️ 教訓:任何 fill/ambient 性質的光都要 `castShadow=false`,只留主光投影,否則多重淡影疊加很難 debug。
