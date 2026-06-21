@@ -736,7 +736,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw53</span><br>` +
+    `<span style="color:#7fd1ff">build sw54</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -835,12 +835,14 @@ const PRESETS = {
     //   CR 向頭側 20-45°(男 20-35/女 30-45,caudad 反向)、對恥骨聯合下方;SID 102。看恥骨上下支。
     // 臥位 CR 向頭傾 = crTilt 負值
     fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
-    joints: {
-      "l_arm.z": -72, "r_arm.z": -72,
-      "l_thigh.y": -15, "r_thigh.y": -15
+    joints: {   // 起點:交疊手臂 + 腿直足內旋(同 inlet),待使用者微調
+      "l_arm.z": -40, "l_arm.x": 25, "l_arm.y": 52, "l_elbow.y": 115, "l_forearm.x": -4, "l_wrist.y": -3, "l_wrist.z": -25,
+      "r_arm.z": -40, "r_arm.x": 25, "r_arm.y": 52, "r_elbow.y": 115, "r_forearm.x": -4, "r_wrist.y": -3, "r_wrist.z": -25,
+      "l_thigh.y": -15, "l_leg.z": 4, "l_shin.y": -15,
+      "r_thigh.y": -15, "r_leg.z": 4, "r_shin.y": -15
     },
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: 0.58, z: 0.55, h: 1.76, pitch: 0, crTilt: -30, bodyTilt: 0, yaw: 0, fieldW: 0.35, fieldH: 0.40, beamOn: 1 },  // CR 向頭 30°,對恥骨聯合下;SID 102
+    tube: { x: 0.95, z: 0.55, h: 1.52, pitch: 0, crTilt: -30, bodyTilt: 0, yaw: 0, fieldW: 0.31, fieldH: 0.40, beamOn: 1, shadowOverhead: 1 },  // 起點:真 CR 向頭 30°、h1.52(SID~102)減少走位、tube.x 待微調對恥骨;shadowOverhead 影子置中
     surfaceField: 1, showCross: 1,
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
