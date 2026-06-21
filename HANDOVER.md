@@ -2,8 +2,10 @@
 
 > 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
 
-## sw34-57:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 + 陰影控制 + pose 片段鈕(2026-06-15~21)
-- ⚠️ **`cspine-ap`(頸椎前後位)和 `neck-ap`(頸部前後位,軟組織/氣道)是兩個獨立 view,別混為一談**(使用者糾正過)。擺位幾乎相同(立位面向板、下巴抬、CR 垂直對 C4、背貼壁架),差在臨床目的/曝光/準直:neck-ap 光野**窄高含枕骨→C7 整個氣道**(fieldW 0.16/fieldH 0.34)、SID 102、用力吐氣;cspine-ap 看骨(C3-T2)、SID 100。兩個都建了起始 preset(sw56/57),待使用者微調。cspine-ap 主站已有照片、neck-ap 是缺照。
+## sw34-58:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat + 陰影控制 + pose 片段鈕(2026-06-15~21)
+- ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
+  - **neck-ap**:光野窄高含枕骨→C7 氣道(16×34)、CR 垂直對 C4、SID 102、用力吐氣。cspine-ap:看骨 C3-T2、常規 cephalad 15-20°、SID 100。
+  - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。
 - **sw53-55 pelvis inlet/outlet 雙雙定版**(同套路:真 crTilt + 降球管 h≈1.5(SID 100-102)減走位 + shadowOverhead 影子置中 + surfaceField 1 + 交疊手臂):
   - **inlet 定版**:`crTilt 40`(向腳)、`tube.x -0.04 / h 1.52`(SID 102)、fieldW 0.31。
