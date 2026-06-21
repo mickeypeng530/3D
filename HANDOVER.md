@@ -1,18 +1,19 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-20(補回 sw34-40 紀錄 + §6 新 view 製作 SOP;線上 build = sw40)
+> 最後更新:2026-06-21(neck-lateral 直十字實驗**全數還原回 sw58**;線上 build = sw69 = sw58 內容。詳見下方 🔴 OPEN ISSUE)
 
-## sw34-58:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat + 陰影控制 + pose 片段鈕(2026-06-15~21)
+## sw34-69:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat(2026-06-15~21)
 - ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
   - **neck-ap**:光野窄高含枕骨→C7 氣道(16×34)、CR 垂直對 C4、SID 102、用力吐氣。cspine-ap:看骨 C3-T2、常規 cephalad 15-20°、SID 100。
   - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
-  - 🔑 **sw59-61 neck-lateral「鎖骨假橫線」真因 = 十字延伸到曲面遠處重複相交**(不是光野邊!sw59 一度誤判):把十字染紅 render 才看清——十字延伸到光野邊,在彎曲軀幹上**相交兩次**(喉部 C4 + 鎖骨/上胸)。
-    - sw60 縮光野(fieldH 0.22)→ 假線沒了但**光野太小**(使用者回報)。
-    - sw61 試 `crossArm`(緊湊十字)→ 假線消失但十字不延伸到光野邊(使用者要延伸)。
-    - 🔑🔑🔑 **sw62-68 最終定版 = 螢幕空間十字 `crossScreen`(使用者點子:十字「畫上去」不靠真實光影投影)**:側位平面十字在彎曲頸面**根本無解**——垂直線只在「表面深度=AP中心」處出現 → 碎片(臉一段)或鎖骨擴散;crossArm(縮短)、crossFace(normalWorld.y 閘)都只能取捨、無法又乾淨又到邊。**正解**:用 TSL `screenUV` 在螢幕空間畫直十字(`vlineS/hlineS = smoothstep 對 |screenUV - uCRScreen|`),在光野範圍 fm 內顯示 → 不管表面曲度都是乾淨直線、延伸到光野邊。per-view `crossScreen 1` 開啟、`crScreen:[x,y]` 設十字中心螢幕 UV(y 上=大)。
-      - ⚠️ 雷:① uniform 用 `uniform(new THREE.Vector2())` **不是** `uniform(vec2())`(TSL vec2 是 node,`.value.set` 無效)。② 3D 投影 CR→螢幕 不穩(相機矩陣/深度偏),改用 **per-view 固定 `crScreen`**(該 view 相機固定→十字位置固定);代價:orbit 不跟隨,但出圖用 preset cam 固定 OK。③ `crossScreen`/`crossArm`/`crossFace`/`fieldSoft` 都是 per-view 備用工具,其他 view 預設不受影響。
-  - 診斷技巧:把十字 color 暫染 `#ff0000`、或 `showCross 0` 對比,一眼看出是不是十字系統畫的。`uCrossW` 加粗反而 blend 掉(細線才明顯)。
-  - **sw59 副產物 `uFieldSoft`(per-view 光野邊 fade 寬,預設 0.015)**:雖然當初為錯的原因加,但仍是有用參數(要柔化任何 view 的光野硬邊就 `tube.fieldSoft`)。neck-lateral 留 0.08。
+- 🔴🆕 **OPEN ISSUE 交接 — neck-lateral(側位)的「直線(垂直十字線)」(換 session 接手)**
+  - **現況**:sw59-68 我(前一個 session)為了修這條線加了一堆機制(fieldSoft / crossArm / crossFace / crossScreen / screenUV / uCRScreen…),使用者認為**越做越壞**,已 **git checkout 87949ec 全數還原回 sw58**(build 標 sw69)。現在 neck-lateral = 原始全長十字 `crossBand = max(crossX, crossZ)`,那些機制**都不存在了**,別去找。
+  - **使用者明確說**:**橫線(crossZ)是對的、不要動**;**只有垂直線(crossX)有問題** —— 在鎖骨/上胸處橫向擴散出一條假橫線。
+  - **問題本質**:十字畫在 3D 表面(`beamPaint`,~line 184)。`posB = uBeamInv·positionWorld`。側位時 `posB.z`≈垂直(world Y)、`posB.x`=AP/水平。垂直線 `crossX = |posB.x|<uCrossW`,在彎曲頸/胸面上凡「表面 AP 深度≈光束中心」的水平帶都被點亮 → 平坦上胸/鎖骨整條亮起 = 假橫線。`crossZ` 水平線單獨乾淨(可用 `showCross 0` 或暫改 `crossBand = crossZ` 驗證)。
+  - **試過、被否決,別重走**:① `crossArm`(限制垂直臂長)→ 乾淨但太短不到光野邊。② `crossFace`(用 `normalWorld.y` 閘 crossX)→ 垂直線被打斷成碎片。③ `crossScreen`(TSL `screenUV` 螢幕空間直十字 + 固定 `crScreen[x,y]`)→ 線乾淨但要固定螢幕座標、orbit 不跟隨;使用者整體不滿意 → 全砍。
+  - **可能方向(動手前先問使用者要哪個)**:(a) 螢幕空間十字但**每幀正確投影 CR→螢幕**跟隨相機(前次投影有相機矩陣/深度偏差未解);(b) billboard 十字物件;(c) 只留橫線、不畫垂直線。
+  - 🩹 **教訓**:這條線連環試了 ~50 次 render、使用者很不耐。接手請**先跟使用者確認方向再動手**,別盲目迭代。
+  - 診斷技巧:十字暫染 `#ff0000` + `showCross 0` 對比,一眼看出哪條線。`screenUV` 在此 three WebGPU 版**可用**(uniform 要 `uniform(new THREE.Vector2())` 不是 `uniform(vec2())`——後者是 node,`.value.set` 無效)。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。
 - **sw53-55 pelvis inlet/outlet 雙雙定版**(同套路:真 crTilt + 降球管 h≈1.5(SID 100-102)減走位 + shadowOverhead 影子置中 + surfaceField 1 + 交疊手臂):
   - **inlet 定版**:`crTilt 40`(向腳)、`tube.x -0.04 / h 1.52`(SID 102)、fieldW 0.31。
