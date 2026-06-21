@@ -9,7 +9,8 @@
   - 🔑 **sw59-61 neck-lateral「鎖骨假橫線」真因 = 十字延伸到曲面遠處重複相交**(不是光野邊!sw59 一度誤判):把十字染紅 render 才看清——十字延伸到光野邊,在彎曲軀幹上**相交兩次**(喉部 C4 + 鎖骨/上胸)。
     - sw60 縮光野(fieldH 0.22)→ 假線沒了但**光野太小**(使用者回報)。
     - sw61 試 `crossArm`(緊湊十字)→ 假線消失但十字不延伸到光野邊(使用者要延伸)。
-    - 🔑🔑 **sw62-65 真正定版**:crossZ-only / crossX-only 測試確認**假線 = 垂直線 crossX 經鎖骨曲面橫向擴散**(crossZ 水平線乾淨)。**正解 = `crossFace`(per-view):crossX 在 `abs(normalWorld.y)` 大的面(朝上/下:鎖骨凹陷、下巴)不畫,正面(法線水平)照畫** → 垂直線仍延伸到光野邊、鎖骨擴散被擋。⚠️ 用 `normalWorld.y` **直接**判斷,別用 `uBeamInv·normal`(光錐有 scale 會把法線轉歪,gate 失效——踩過)。neck-lateral 設 `crossFace 1`、光野 30×42 對齊光錐(`fieldSoft` 移除,否則光野比光錐小)。`crossArm`/`uFieldSoft` 保留為備用參數。
+    - 🔑🔑🔑 **sw62-68 最終定版 = 螢幕空間十字 `crossScreen`(使用者點子:十字「畫上去」不靠真實光影投影)**:側位平面十字在彎曲頸面**根本無解**——垂直線只在「表面深度=AP中心」處出現 → 碎片(臉一段)或鎖骨擴散;crossArm(縮短)、crossFace(normalWorld.y 閘)都只能取捨、無法又乾淨又到邊。**正解**:用 TSL `screenUV` 在螢幕空間畫直十字(`vlineS/hlineS = smoothstep 對 |screenUV - uCRScreen|`),在光野範圍 fm 內顯示 → 不管表面曲度都是乾淨直線、延伸到光野邊。per-view `crossScreen 1` 開啟、`crScreen:[x,y]` 設十字中心螢幕 UV(y 上=大)。
+      - ⚠️ 雷:① uniform 用 `uniform(new THREE.Vector2())` **不是** `uniform(vec2())`(TSL vec2 是 node,`.value.set` 無效)。② 3D 投影 CR→螢幕 不穩(相機矩陣/深度偏),改用 **per-view 固定 `crScreen`**(該 view 相機固定→十字位置固定);代價:orbit 不跟隨,但出圖用 preset cam 固定 OK。③ `crossScreen`/`crossArm`/`crossFace`/`fieldSoft` 都是 per-view 備用工具,其他 view 預設不受影響。
   - 診斷技巧:把十字 color 暫染 `#ff0000`、或 `showCross 0` 對比,一眼看出是不是十字系統畫的。`uCrossW` 加粗反而 blend 掉(細線才明顯)。
   - **sw59 副產物 `uFieldSoft`(per-view 光野邊 fade 寬,預設 0.015)**:雖然當初為錯的原因加,但仍是有用參數(要柔化任何 view 的光野硬邊就 `tube.fieldSoft`)。neck-lateral 留 0.08。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。

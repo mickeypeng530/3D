@@ -123,7 +123,7 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec3, vec4, smoothstep, max, sin, floor as tslFloor } from "three/tsl";
+import { positionGeometry, positionWorld, normalWorld, color, mix, step, float, abs, uniform, vec2, vec3, vec4, smoothstep, max, sin, floor as tslFloor, screenUV } from "three/tsl";
 import { World, Man, scene, camera, renderer, controls, ground, light, cameraLight } from "disfigure";
 
 /* ============================================================
@@ -175,7 +175,10 @@ const uMouthOpen = uniform(0);    // 張口示意(只 styloid view):臉部口部
 const uMouthDbg = uniform(0);     // 探嘴巴位置用:染亮色(?mouth=2)
 const uCrossW = uniform(0.008);   // 十字線半寬(m),外緣(UI「十字線寬」可調;使用者定 16mm→0.008)
 const uCrossArm = uniform(10);    // 十字臂長半徑(beam 局部,per-view);預設 10=不限(延伸到光野邊);調小=緊湊十字(避免平面十字在曲面重複相交出假線)
-const uCrossFace = uniform(0);    // 十字垂直線「朝上/下面不畫」閘(per-view,0=off):1=crossX 在 normalWorld.y 大的面(鎖骨凹陷/下巴)不畫 → 擋垂直線經曲面的橫向擴散假線,正面照畫(十字仍延伸到光野邊)
+const uCrossFace = uniform(0);    // (備用)十字垂直線「朝上/下面不畫」閘
+const uCrossScreen = uniform(0);  // 螢幕空間十字(per-view,0=off):1=十字改用 screenUV 畫直線(不靠表面投影)→ 側位彎曲面也是乾淨直十字。在光野範圍內顯示
+const uCRScreen = uniform(new THREE.Vector2(0.5, 0.5));   // CR 投影到螢幕的 UV(applyAll/相機變動時更新)
+const uCrossScreenW = uniform(0.003);        // 螢幕十字半寬(UV)
 const uPaintRZ = uniform(0.09);   // 範圍閘:前後(z)半徑——窄→排除高舉在板側(-z)的手臂,但保留後頸/肩
 const uPlateField = uniform(0.35);  // X 光板上「光野」亮度(0=板上不顯光野);身體陰影由場景 sun 投影呈現
 const uPlateFrame = uniform(1);     // X 光板上光野「框線」(0=不畫框)
@@ -199,9 +202,13 @@ function beamPaint(base, onSurface) {
   const armZ = smoothstep(uCrossArm, uCrossArm.sub(0.02), abs(posB.x));
   const crossX = smoothstep(uCrossW.mul(0.4), uCrossW, abs(posB.x)).oneMinus().mul(armX);   // 垂直線:臂長受 crossArm 限制(避免延到鎖骨曲面擴散)
   const crossZ = smoothstep(uCrossW.mul(0.4), uCrossW, abs(posB.z)).oneMinus();              // 水平線:全長(實測乾淨)
-  // crossFace 閘:垂直線 crossX 在「朝上/下面」(鎖骨擴散處)不畫 → 擋鎖骨假橫線(使用者確認橫線 OK)。
-  const gx = mix(float(1), smoothstep(float(0.55), float(0.30), abs(normalWorld.y)), uCrossFace);
-  const crossBand = max(crossX.mul(gx), crossZ);
+  const surfCross = max(crossX, crossZ);   // 表面投影十字(AP/正位 view 用,乾淨)
+  // 螢幕空間十字(側位用):用 screenUV 對 CR 投影點畫直線,不靠表面曲度 → 永遠乾淨的直十字
+  const sd = screenUV.sub(uCRScreen);
+  const vlineS = smoothstep(uCrossScreenW.mul(2.2), uCrossScreenW, abs(sd.x));   // 垂直線(近 CR 螢幕 x)
+  const hlineS = smoothstep(uCrossScreenW.mul(2.2), uCrossScreenW, abs(sd.y));   // 水平線(近 CR 螢幕 y)
+  const screenCross = max(vlineS, hlineS);
+  const crossBand = mix(surfCross, screenCross, uCrossScreen);   // per-view:0=表面投影、1=螢幕空間直十字
 
   // 身體遮擋:焦點->表面點 的射線若穿過身體橢球 = 在身體影子裡,不畫光野
   // (橢球座標正規化後解二次式;表面點本身在橢球內 = 身體自己,照常畫)
@@ -624,6 +631,17 @@ function resetPose() { for (const p of ALL_PATHS) setJoint(p, 0); }
 // 讓「SID」滑桿沿光束把球管推遠/拉近到指定距離(其他球管軸不動)
 let lastSID = 1.0;
 let lastBeamDir = new THREE.Vector3(0, 0, -1);
+const crAnchorRoom = new THREE.Vector3();   // CR 在身體附近的錨點(room 座標),供螢幕空間十字投影
+// CR 投影到螢幕 UV(螢幕空間十字用);相機變動時要更新
+function updateCRScreen() {
+  const p = crAnchorRoom.clone();
+  ROOMG.updateMatrixWorld();
+  ROOMG.localToWorld(p);     // room → world(非臥位 ROOMG=identity)
+  camera.updateMatrixWorld();
+  camera.matrixWorldInverse.copy(camera.matrixWorld).invert();   // project() 需要最新逆矩陣
+  p.project(camera);          // → NDC (-1..1)
+  uCRScreen.value.set(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5);
+}
 function applyAll() {
   figure.position.set(S.fig.x, GL + S.fig.y, S.fig.z);
   // 旋轉必須下在 figure 本體(parent Group 會被變形 shader 忽略);大角度根旋轉會翻轉部分關節軸語意(HANDOVER)
@@ -716,6 +734,9 @@ function applyAll() {
   uFieldSoft.value = S.tube.fieldSoft || 0.015;   // 預設硬邊;per-view 調大柔化光野邊緣
   uCrossArm.value = S.tube.crossArm || 10;        // 預設不限;per-view 調小=緊湊十字(避免曲面重複線)
   uCrossFace.value = S.tube.crossFace || 0;       // 預設 off;per-view 1=十字只畫正對球管面(擋曲面重複假線、十字仍延伸到邊)
+  uCrossScreen.value = S.tube.crossScreen || 0;   // per-view 1=螢幕空間直十字(側位用)
+  // 螢幕十字中心:per-view 固定 UV(該 view 相機固定→十字位置固定;比 3D 投影穩)。[x,y],y 上=大
+  if (S.tube.crScreen) uCRScreen.value.set(S.tube.crScreen[0], S.tube.crScreen[1]);
   uBeamLen.value = L;
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
   uShowCross.value = (S.showCross === 0) ? 0 : 1;
@@ -747,7 +768,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw66</span><br>` +
+    `<span style="color:#7fd1ff">build sw68</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -812,7 +833,7 @@ const PRESETS = {
     //   軟組織/異物(魚骨、咽後膿腫、哮吼、會厭炎),急診兒童多。
     fig: { x: -0.9, z: -1.40, y: 0, rotY: 90, rotZ: 0 },   // 側位(同 cspine-lateral)
     joints: { "l_arm.z": -85, "r_arm.z": -85, "head.x": -8 },   // ★用力下壓雙臂(肩沉露下頸);下巴略抬
-    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.30, fieldH: 0.42, beamOn: 1, crossArm: 0.08 },  // ★SID 183(z 0.56);CR 水平對 C4(h1.52);光野 30×42;crossArm 0.08=垂直線壓成 C4 小 tick(側位垂直線碎片/擴散→只留乾淨小段);水平線全長
+    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.30, fieldH: 0.42, beamOn: 1, crossScreen: 1, crScreen: [0.47, 0.60] },  // ★SID 183(z 0.56);CR 水平對 C4(h1.52);光野 30×42;crossScreen 1=螢幕空間直十字;crScreen=十字中心螢幕 UV(對頸部,待微調)
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 0.95, z: -1.40, rx: 0.26, ry: 0.95, rz: 0.16 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
