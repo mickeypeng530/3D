@@ -738,7 +738,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw59</span><br>` +
+    `<span style="color:#7fd1ff">build sw60</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -803,7 +803,7 @@ const PRESETS = {
     //   軟組織/異物(魚骨、咽後膿腫、哮吼、會厭炎),急診兒童多。
     fig: { x: -0.9, z: -1.40, y: 0, rotY: 90, rotZ: 0 },   // 側位(同 cspine-lateral)
     joints: { "l_arm.z": -85, "r_arm.z": -85, "head.x": -8 },   // ★用力下壓雙臂(肩沉露下頸);下巴略抬
-    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.22, fieldH: 0.34, beamOn: 1, fieldSoft: 0.08 },  // ★SID 183:球管拉遠(z 0.56→SID~183);CR 水平對 C4(h1.52 喉結中頸);光野高含顱底→C7;fieldSoft 0.08 柔化邊緣不成線
+    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.22, fieldH: 0.22, beamOn: 1, fieldSoft: 0.08 },  // ★SID 183:球管拉遠(z 0.56→SID~183);CR 水平對 C4(h1.52);fieldH 縮到 0.22 讓下緣在鎖骨上(遮掉十字平面在曲面的第二交點);fieldSoft 0.08 柔邊
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 0.95, z: -1.40, rx: 0.26, ry: 0.95, rz: 0.16 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }

@@ -6,7 +6,9 @@
 - ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
   - **neck-ap**:光野窄高含枕骨→C7 氣道(16×34)、CR 垂直對 C4、SID 102、用力吐氣。cspine-ap:看骨 C3-T2、常規 cephalad 15-20°、SID 100。
   - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
-  - **sw59 光野邊緣可調 `uFieldSoft`(per-view,預設 0.015 硬邊)**:光野矩形下緣是硬邊,會在身體/衣服上切出一條「假線」(使用者圈出 neck-lateral 鎖骨那條)。`inX/inZ` 的 fade 寬改吃 `S.tube.fieldSoft`(applyAll 更新 uniform)。neck-lateral 設 `fieldSoft 0.08`→下緣變柔漸層、不成線。其他 view 沒設=維持硬邊不變。要消任何 view 的光野硬邊線就加 `fieldSoft`。
+  - 🔑 **sw59-60 neck-lateral「鎖骨假橫線」真因 = 十字平面在曲面重複相交**(不是光野邊!我 sw59 一度誤判成光野邊):把十字染紅 render 才看清——十字水平面 `posB.z=0` 在彎曲軀幹上**相交兩次**(喉部 C4 一次、鎖骨/上胸又一次),第二條落在 tall 光野內就被畫出來。**修法 sw60:縮短光野 `fieldH 0.34→0.22`**,下緣移到鎖骨之上 → 第二交點落光野外被 mask 掉,C4 十字保留。代價:光野沒蓋到 C7(示意圖可接受)。
+  - 診斷技巧:把十字 color 暫染 `#ff0000`、或 `showCross 0` 對比,一眼看出是不是十字系統畫的。`uCrossW` 加粗反而 blend 掉(細線才明顯)。
+  - **sw59 副產物 `uFieldSoft`(per-view 光野邊 fade 寬,預設 0.015)**:雖然當初為錯的原因加,但仍是有用參數(要柔化任何 view 的光野硬邊就 `tube.fieldSoft`)。neck-lateral 留 0.08。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。
 - **sw53-55 pelvis inlet/outlet 雙雙定版**(同套路:真 crTilt + 降球管 h≈1.5(SID 100-102)減走位 + shadowOverhead 影子置中 + surfaceField 1 + 交疊手臂):
   - **inlet 定版**:`crTilt 40`(向腳)、`tube.x -0.04 / h 1.52`(SID 102)、fieldW 0.31。
