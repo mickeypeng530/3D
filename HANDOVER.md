@@ -8,7 +8,8 @@
   - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
   - 🔑 **sw59-61 neck-lateral「鎖骨假橫線」真因 = 十字延伸到曲面遠處重複相交**(不是光野邊!sw59 一度誤判):把十字染紅 render 才看清——十字延伸到光野邊,在彎曲軀幹上**相交兩次**(喉部 C4 + 鎖骨/上胸)。
     - sw60 縮光野(fieldH 0.22)→ 假線沒了但**光野太小**(使用者回報)。
-    - 🔑 **sw61 正解 = 緊湊十字 `crossArm`(per-view 十字臂長,預設 10=不限)**:neck-lateral 設 `crossArm 0.08`→十字只在 C4 附近的緊湊 +,不延伸到鎖骨 → 假線消失,**光野可維持大**(30×34 含 C7)。機制:`armX/armZ` 用 uCrossArm 限制 crossX/crossZ 的臂長。要消任何「平面十字畫到曲面」的重複線就調小 `crossArm`。
+    - sw61 試 `crossArm`(緊湊十字)→ 假線消失但十字不延伸到光野邊(使用者要延伸)。
+    - 🔑🔑 **sw62-65 真正定版**:crossZ-only / crossX-only 測試確認**假線 = 垂直線 crossX 經鎖骨曲面橫向擴散**(crossZ 水平線乾淨)。**正解 = `crossFace`(per-view):crossX 在 `abs(normalWorld.y)` 大的面(朝上/下:鎖骨凹陷、下巴)不畫,正面(法線水平)照畫** → 垂直線仍延伸到光野邊、鎖骨擴散被擋。⚠️ 用 `normalWorld.y` **直接**判斷,別用 `uBeamInv·normal`(光錐有 scale 會把法線轉歪,gate 失效——踩過)。neck-lateral 設 `crossFace 1`、光野 30×42 對齊光錐(`fieldSoft` 移除,否則光野比光錐小)。`crossArm`/`uFieldSoft` 保留為備用參數。
   - 診斷技巧:把十字 color 暫染 `#ff0000`、或 `showCross 0` 對比,一眼看出是不是十字系統畫的。`uCrossW` 加粗反而 blend 掉(細線才明顯)。
   - **sw59 副產物 `uFieldSoft`(per-view 光野邊 fade 寬,預設 0.015)**:雖然當初為錯的原因加,但仍是有用參數(要柔化任何 view 的光野硬邊就 `tube.fieldSoft`)。neck-lateral 留 0.08。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。
