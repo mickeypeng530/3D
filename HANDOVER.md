@@ -6,6 +6,7 @@
 - ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
   - **neck-ap**:光野窄高含枕骨→C7 氣道(16×34)、CR 垂直對 C4、SID 102、用力吐氣。cspine-ap:看骨 C3-T2、常規 cephalad 15-20°、SID 100。
   - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
+  - **sw59 光野邊緣可調 `uFieldSoft`(per-view,預設 0.015 硬邊)**:光野矩形下緣是硬邊,會在身體/衣服上切出一條「假線」(使用者圈出 neck-lateral 鎖骨那條)。`inX/inZ` 的 fade 寬改吃 `S.tube.fieldSoft`(applyAll 更新 uniform)。neck-lateral 設 `fieldSoft 0.08`→下緣變柔漸層、不成線。其他 view 沒設=維持硬邊不變。要消任何 view 的光野硬邊線就加 `fieldSoft`。
 - ⚠️ **立位 cephalad 用 pitch(90+角度);大角度會讓光野走位上頭頂**(neck/cspine 的「向頭 10-20°」是下巴抬不起時的替代,下巴已抬就用垂直 pitch 90)。
 - **sw53-55 pelvis inlet/outlet 雙雙定版**(同套路:真 crTilt + 降球管 h≈1.5(SID 100-102)減走位 + shadowOverhead 影子置中 + surfaceField 1 + 交疊手臂):
   - **inlet 定版**:`crTilt 40`(向腳)、`tube.x -0.04 / h 1.52`(SID 102)、fieldW 0.31。

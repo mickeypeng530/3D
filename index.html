@@ -163,6 +163,7 @@ const uOcclOn = uniform(0);
 const uSurfaceField = uniform(1);   // 承光面是否顯示光野(0 = 只畫在人偶身上,檯面乾淨)
 const uFieldW = uniform(0.24);
 const uFieldH = uniform(0.30);
+const uFieldSoft = uniform(0.015);   // 光野邊緣 fade 寬(per-view;預設 0.015 硬邊,調大=柔邊不成線)
 const uBeamLen = uniform(1.0);
 const uCrossOn = uniform(1);
 const uShowCross = uniform(1);   // 0 = 只留柔光罩、不畫十字陰影(示意圖風格)
@@ -187,8 +188,8 @@ function beamPaint(base, onSurface) {
   const farFade = smoothstep(uBeamLen.add(0.03), uBeamLen.add(0.30), d).oneMinus();
   const halfW = uFieldW.mul(0.5).mul(d).div(uBeamLen);
   const halfH = uFieldH.mul(0.5).mul(d).div(uBeamLen);
-  const inX = smoothstep(halfW.sub(0.015), halfW, abs(posB.x)).oneMinus();
-  const inZ = smoothstep(halfH.sub(0.015), halfH, abs(posB.z)).oneMinus();
+  const inX = smoothstep(halfW.sub(uFieldSoft), halfW, abs(posB.x)).oneMinus();
+  const inZ = smoothstep(halfH.sub(uFieldSoft), halfH, abs(posB.z)).oneMinus();
   const fieldMask = nearFade.mul(farFade).mul(inX).mul(inZ).mul(uCrossOn);
   // 寬約 15mm 的軟邊十字陰影帶
   const crossX = smoothstep(uCrossW.mul(0.4), uCrossW, abs(posB.x)).oneMinus();
@@ -705,6 +706,7 @@ function applyAll() {
   // 表面著色 uniform:光束逆矩陣(十字/光野畫在表面,任何視角正確)
   uFieldW.value = S.tube.fieldW;
   uFieldH.value = S.tube.fieldH;
+  uFieldSoft.value = S.tube.fieldSoft || 0.015;   // 預設硬邊;per-view 調大柔化光野邊緣
   uBeamLen.value = L;
   uCrossOn.value = S.tube.beamOn ? 1 : 0;
   uShowCross.value = (S.showCross === 0) ? 0 : 1;
@@ -736,7 +738,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw58</span><br>` +
+    `<span style="color:#7fd1ff">build sw59</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -801,7 +803,7 @@ const PRESETS = {
     //   軟組織/異物(魚骨、咽後膿腫、哮吼、會厭炎),急診兒童多。
     fig: { x: -0.9, z: -1.40, y: 0, rotY: 90, rotZ: 0 },   // 側位(同 cspine-lateral)
     joints: { "l_arm.z": -85, "r_arm.z": -85, "head.x": -8 },   // ★用力下壓雙臂(肩沉露下頸);下巴略抬
-    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.22, fieldH: 0.34, beamOn: 1 },  // ★SID 183:球管拉遠(z 0.56→SID~183);CR 水平對 C4(h1.52 喉結中頸);光野高含顱底→C7
+    tube: { x: -0.9, z: 0.56, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.22, fieldH: 0.34, beamOn: 1, fieldSoft: 0.08 },  // ★SID 183:球管拉遠(z 0.56→SID~183);CR 水平對 C4(h1.52 喉結中頸);光野高含顱底→C7;fieldSoft 0.08 柔化邊緣不成線
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 0.95, z: -1.40, rx: 0.26, ry: 0.95, rz: 0.16 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
