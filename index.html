@@ -559,7 +559,7 @@ const S = {
   fig:  { x: -0.9, z: -1.40, y: 0, rotY: 90, rotZ: 0 },
   tube: { x: -0.9, z: 0.14, h: 1.50, pitch: 90, yaw: 0, fieldW: 0.24, fieldH: 0.30, beamOn: 1 },
   ws:   { h: 1.50 },
-  det:  { x: 1.38, z: 0.55, on: 0 },
+  det:  { x: 1.38, z: 0.55, on: 0, h: 0 },
   room: { lie: 0, ox: 0, oy: 0, oz: 0 },   // lie=1 -> 房間旋轉(人偶保持站立=圖面上躺下)
   occl: null   // 身體遮擋橢球 {x,y,z,rx,ry,rz}(房間座標),光野/十字不畫進身體影子
 };
@@ -646,7 +646,7 @@ function applyAll() {
   wsAll.position.x = (S.ws.x === undefined ? -0.9 : S.ws.x) + 0.9;
   wsCarriage.position.y = S.ws.h - 1.45;
   tblDet.visible = !!S.det.on;
-  tblDet.position.set(S.det.x, 0, S.det.z);
+  tblDet.position.set(S.det.x, S.det.h || 0, S.det.z);   // h = 架高桌板(0=貼檯面;站姿手臂 view 可架高到手肘)
 
   tubeRig.position.set(S.tube.x, 0, S.tube.z);
   tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
@@ -693,7 +693,7 @@ function applyAll() {
     if (t > 0.3) cands.push({ t, what: "壁架板" });
   }
   if (Math.abs(dir.y) > 0.05) {
-    const planeY = GL + (S.det.on ? TBL.topY + 0.02 : TBL.topY);
+    const planeY = GL + (S.det.on ? TBL.topY + (S.det.h || 0) + 0.02 : TBL.topY);
     const t = (planeY - focal.y) / dir.y;
     if (t > 0.3) cands.push({ t, what: S.det.on ? "檯面偵檢板" : "檯面" });
   }
@@ -748,7 +748,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw73</span><br>` +
+    `<span style="color:#7fd1ff">build sw74</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -1300,6 +1300,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "檯板顯示", 0, 1, 1, () => S.det.on, v => S.det.on = v);
   addSlider(g, "檯板 X (m)", -0.4, 2.0, 0.01, () => S.det.x, v => S.det.x = v);
   addSlider(g, "檯板 Z (m)", 0.1, 1.0, 0.01, () => S.det.z, v => S.det.z = v);
+  addSlider(g, "檯板高度 (m)", 0, 0.9, 0.01, () => (S.det.h || 0), v => S.det.h = v);   // 0=貼檯面;架高給站姿手臂 view(olecranon 等)
 }
 
 /* ============================================================
