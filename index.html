@@ -382,8 +382,9 @@ const mat = {
   panel:  beamLambert("#f2f4f6"),
   active: beamLambert("#fafcfe"),
   table:  beamLambert("#e6ebef"),
-  casFace: beamLambert("#f5f8fb"),                                   // 桌板 cassette 面:白色(仿 forearm-lateral 實拍 IR;beamLambert 可顯光野)
-  casRim:  new THREE.MeshLambertMaterial({ color: 0xa8aeb4 }),       // 桌板 cassette 灰色金屬外框
+  casFace: beamLambert("#d7dbde"),                                   // 桌板 DR 面板:淺灰(仿 IR.png;beamLambert 光野打到會亮成白)
+  casRim:  new THREE.MeshLambertMaterial({ color: 0xc6cacd }),       // DR 面板淺灰圓角邊框
+  casLine: new THREE.MeshLambertMaterial({ color: 0xa6acb1 }),       // DR 面板四象限十字定位線(淡)
   beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false })   // 單面+低不透明度:避免多層疊成白盤
 };
 
@@ -455,9 +456,11 @@ rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);
 const tblDet = new THREE.Group();
 ROOMG.add(tblDet);
 {
-  rbox(0.46, 0.016, 0.38, 0.006, mat.casRim, 0, TBL.topY + 0.008, 0, tblDet);          // cassette 灰色金屬外框
-  const a = box(0.43, 0.005, 0.35, mat.casFace, 0, TBL.topY + 0.018, 0, tblDet);       // cassette 白面(仿 forearm-lateral IR;可顯光野)
+  rbox(0.46, 0.016, 0.38, 0.007, mat.casRim, 0, TBL.topY + 0.008, 0, tblDet);          // DR 面板淺灰圓角邊框
+  const a = box(0.435, 0.006, 0.355, mat.casFace, 0, TBL.topY + 0.017, 0, tblDet);     // DR 面板淺灰面(仿 IR.png;可顯光野)
   a.receiveShadow = true;
+  box(0.40, 0.0012, 0.0035, mat.casLine, 0, TBL.topY + 0.0205, 0, tblDet);             // 四象限十字定位線:橫
+  box(0.0035, 0.0012, 0.33, mat.casLine, 0, TBL.topY + 0.0205, 0, tblDet);             // 四象限十字定位線:縱
 }
 
 /* ============================================================
@@ -750,7 +753,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw77</span><br>` +
+    `<span style="color:#7fd1ff">build sw78</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
