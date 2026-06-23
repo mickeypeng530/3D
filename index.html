@@ -748,7 +748,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw74</span><br>` +
+    `<span style="color:#7fd1ff">build sw75</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -820,6 +820,20 @@ const PRESETS = {
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 0.95, z: -1.40, rx: 0.26, ry: 0.95, rz: 0.16 },
     cam: { px: -2.05, py: 1.74, pz: -0.78, tx: -0.80, ty: 1.40, tz: -1.48 }   // 使用者定版:後側拍(避開臉),後腦/後頸/沉肩 + 壁架板;蓋章終圖 shots/sealed_necklat_final.png
+  },
+  "elbow-olecranon": {
+    label: "肘關節鷹嘴位 Elbow Olecranon(軸位,屈肘 ≥90°)",
+    // 本院 SOP(positions.json elbow-olecranon,2019/09 教案):坐/站,上臂(肱骨)順 IR 長軸平貼板;
+    //   前臂銳角彎曲、指尖置於肩部;CR 垂直入射內外上髁連線中點;鷹嘴突軸位呈現於肘後方。SID 100。
+    // ⚠️ sim 是全身人偶:用「桌板架高 det.h + 站姿上臂水平外展貼板 + 超屈肘」近似坐姿桌上 view。
+    //   ★起始 pose,待使用者用滑桿微調手臂/板位再 📋 回填。架高板 → SID 偏短(几何壓縮),示意用不影響。
+    fig: { x: 0.3, z: 0.2, y: 0, rotY: 0, rotZ: 0 },
+    joints: { "l_arm.z": -72, "r_arm.z": -5, "r_elbow.y": 155 },   // 左臂垂放;右上臂水平外展貼板、超屈肘(手回到肩 = 指尖到肩)
+    tube: { x: 0.12, z: 0.22, h: 1.98, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // CR 垂直朝下對肘;小光野
+    det: { x: 0.18, z: 0.25, on: 1, h: 0.63 },   // 桌板開 + 架高到肩高(h0.63→板面 ~1.39m)讓站姿上臂平貼
+    ws: { h: 1.50 },
+    surfaceField: 0, showCross: 1,   // 檯面光野關(架高板會雙光斑);CR 十字畫手臂上
+    cam: { px: 1.7, py: 2.05, pz: 1.9, tx: 0.25, ty: 1.32, tz: 0.25 }
   },
   "pelvis-ap": {
     label: "骨盆前後位 Pelvis AP(仰臥)",
@@ -1056,6 +1070,7 @@ function applyPreset(key) {
   S.tube.shadowOverhead = 0; // 影子光源正上方旗標歸零
   Object.assign(S.tube, p.tube);
   Object.assign(S.ws, p.ws);
+  S.det.h = 0;   // 桌板架高歸零(preset 沒指定就不殘留上一個的架高;站姿手臂 view 才用)
   Object.assign(S.det, p.det);
   S.room = p.room ? { ...p.room } : { lie: 0, ox: 0, oy: 0, oz: 0 };
   S.occl = p.occl ? { ...p.occl } : null;
