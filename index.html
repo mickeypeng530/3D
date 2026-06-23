@@ -757,7 +757,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw79</span><br>` +
+    `<span style="color:#7fd1ff">build sw80</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -835,11 +835,11 @@ const PRESETS = {
     // 本院 SOP(positions.json elbow-olecranon,2019/09 教案):坐/站,上臂(肱骨)順 IR 長軸平貼板;
     //   前臂銳角彎曲、指尖置於肩部;CR 垂直入射內外上髁連線中點;鷹嘴突軸位呈現於肘後方。SID 100。
     // ⚠️ sim 是全身人偶:用「桌板架高 det.h + 站姿上臂水平外展貼板 + 超屈肘」近似坐姿桌上 view。
-    //   使用者微調 pose(2026-06-24,📋 回填):軀幹轉向板 chest.y 60 + waist.y 19、右上臂貼板超屈肘、前臂旋 -90。架高板 → SID 偏短(几何壓縮),示意用不影響。
-    fig: { x: 0.19, z: -0.14, y: 0, rotY: 2, rotZ: 0 },
-    joints: { "chest.y": 60, "waist.y": 19, "l_arm.z": -72, "r_arm.z": -15, "r_arm.x": -78, "r_arm.y": 7, "r_elbow.y": 150, "r_forearm.x": -90, "r_wrist.z": -14 },   // 使用者定版:軀幹轉向板、右上臂貼板超屈肘
-    tube: { x: 0.12, z: 0.22, h: 1.98, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // CR 垂直朝下對肘;小光野
-    det: { x: 0.15, z: 0.3, on: 1, h: 0.63 },   // 桌板開 + 架高 h0.63(板面 ~1.39m)讓站姿上臂平貼
+    //   使用者定版 pose(2026-06-24,📋 回填):軀幹轉向板 chest.y 60 + waist.y 19、右上臂貼板超屈肘、前臂旋 -90、微屈髖站姿。tube.h 2.37 → SID 100。蓋章終圖 shots/sealed_olecranon.png。
+    fig: { x: 0.19, z: -0.18, y: 0.03, rotY: 2, rotZ: 0 },
+    joints: { "chest.y": 60, "waist.y": 19, "l_arm.z": -72, "r_arm.z": -16, "r_arm.x": -75, "r_arm.y": 4, "r_elbow.y": 150, "r_forearm.x": -90, "r_wrist.z": -14, "l_leg.x": -30, "l_thigh.y": -25, "l_leg.z": -2, "r_leg.x": -30 },   // 使用者定版:軀幹轉向板、右上臂貼板超屈肘、微屈髖
+    tube: { x: 0.12, z: 0.22, h: 2.37, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.16, beamOn: 1 },  // CR 垂直朝下對肘;tube.h 2.37 → SID 100;小光野
+    det: { x: 0.12, z: 0.22, on: 1, h: 0.61 },   // 桌板開 + 架高 h0.61;對齊 CR(x/z 同球管)
     ws: { h: 1.50, x: -0.89 },
     surfaceField: 1, showCross: 1, surfaceCross: 1,   // 板上顯示光野 + CR 投影十字延伸到板(使用者要求)
     cam: { px: 1.7, py: 2.05, pz: 1.9, tx: 0.25, ty: 1.32, tz: 0.25 }
