@@ -1,12 +1,15 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-21(✅ **sw71 neck-lateral 使用者定版**:後側拍避開臉 + SID 150(tube.z -0.16)+ chest.x 1;蓋章終圖 `shots/sealed_necklat_final.png`。sw70 已解垂直十字線鎖骨假橫帶——per-view `crossMid` flag,詳見下方)
+> 最後更新:2026-06-21(✅ **sw73 neck-ap 定版(SID 140)** + ✅ **sw74 桌板加「檯板高度」det.h** + 🆕 **sw75 elbow-olecranon 起始 preset**(架高板 + 站姿上臂貼板)。neck-lateral 定版 sw71-72(後側拍 SID 150)、neck-ap 蓋章 `shots/sealed_neck_ap.png`、neck-lateral 蓋章 `shots/sealed_necklat_final.png`。詳見下方)
 
 ## sw34-69:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat(2026-06-15~21)
 - ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
   - **neck-ap**:光野窄高含枕骨→C7 氣道(16×34)、CR 垂直對 C4、SID 102、用力吐氣。cspine-ap:看骨 C3-T2、常規 cephalad 15-20°、SID 100。
   - 🔑 **neck-lateral 差 cspine-lateral 最多**:① **SID 183cm**(長 SID 減放大;`tube.z 0.56`→SID~183,公式 SID≈196×tube.z+72.5,pitch 90 立位)② **用力下壓雙肩**(arm.z -85,投影到 C7 以下露下頸)③ 光野高含顱底→C7。cspine-lateral SID 100、肩只放低。
 - ✅ **sw71 neck-lateral 使用者定版(2026-06-21)**:📋 複製數值原封回填——`fig.x -0.84`、`head.x -9`、`chest.x 1` 微挺、雙臂 `-85` 下壓沉肩、`tube.z -0.16`(**SID 150**;使用者選短 SID,非教科書 183)。**使用者改從後側拍避開臉**:cam(立位=world 座標)`pos(-2.05,1.74,-0.78)→tgt(-0.80,1.40,-1.48)`,呈現後腦/後頸/沉肩 + 壁架板。crossMid 1 沿用。蓋章終圖 `shots/sealed_necklat_final.png`(後側、右下 SP 章、無 banner;1920×1080 用 shot_server toDataURL 管道渲染——**headless Chrome 本次一直回空白 3KB 幀,改用 preview+toDataURL 才成**)。**尚未上傳主站 positions.json**(待使用者拍板;上傳另用 firebase-admin)。
+- ✅ **sw72-73 neck-ap 使用者定版**:📋 回填——`tube.z -0.26`(**SID 140**,非教科書 102)、`h 1.5`、光野 **16×32**、`head.x -15` 下顎抬、雙臂 -72、`crossMid 0`(AP 正面用 beam 線)。蓋章終圖 `shots/sealed_neck_ap.png`。(sw72 是 neck-lateral tube.h 1.52→1.5 微調)
+- 🆕 **sw74 桌板「檯板高度」`det.h`(0-0.9m 滑桿)**:`det` 原本只有 X/Z、固定貼檯面 0.74m;新增 `S.det.h` 把檯面偵檢板架高,給**站姿上肢桌上 view**(免不穩坐姿)。`tblDet.position.set(x, det.h, z)` + SID 計算算進架高 + applyPreset `S.det.h=0` 歸零(切 view 不殘留)。UI「壁架與偵檢板」群組。
+- 🆕 **sw75 `elbow-olecranon` 起始 preset**(肘鷹嘴軸位):全身人偶做坐姿桌上 view 的 workaround = **桌板架高 `det.h 0.63`(板面~1.39m)+ 站姿上臂水平外展貼板(`r_arm.z -5`)+ 超屈肘(`r_elbow.y 155`,手回肩=指尖到肩)** + CR 垂直朝下對肘。本院 SOP 見 `Xray/positions.json` elbow-olecranon(2019/09 教案)。**⚠️ 起始 pose,待使用者滑桿微調手臂/板位再 📋 回填**;架高 + 天吊球管 → **SID 顯示偏短(~59cm,几何壓縮),示意用不影響**。對照圖 `shots/olec_board1.png`。
 - ✅🆕 **(原 OPEN ISSUE,sw70 已解)neck-lateral 垂直十字線鎖骨假橫帶**
   - **問題本質**:十字畫在 3D 表面(`beamPaint`,~line 184)。垂直線 `crossX = |posB.x|<uCrossW` 是「光束平面」,在彎曲頸面是乾淨直線,但延伸到**平坦的鎖骨/上胸**就跟那個平面**相切** → `|posB.x|<半寬` 在一整片水平面成立 → 糊成假橫帶(使用者圈的綠圈)。橫線 `crossZ` 一直是對的、沒動。
   - ✅ **sw70 解法(使用者拍板「畫在身上、只修頸根」)**:新增 per-view flag **`crossMid`**(只開在 neck-lateral preset)。`crossX` 改成混合:
@@ -91,7 +94,7 @@
 
 ## 0. 接手起點(先讀這段)
 
-**線上版 build 號 `sw71`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=71`)。最近完成:**neck-lateral 定版(sw71,後側拍 + SID 150,蓋章終圖已出)、垂直十字線鎖骨假橫帶修正(sw70 `crossMid`)**;早期 Dunn 腿間黑影(sw40)、骨盆蛙式/入口/出口、Stenvers 真斜(見頂部 sw34-71 區塊)。
+**線上版 build 號 `sw75`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=75`)。最近完成:**elbow-olecranon 起始 preset(sw75)、桌板架高 det.h(sw74)、neck-ap 定版 SID 140(sw73)、neck-lateral 定版後側拍 SID 150(sw71-72)、垂直十字線鎖骨假橫帶修正(sw70 `crossMid`)**;早期見頂部 sw34-75 區塊。
 
 **目前著色模型(看 §2 swimmer 條與下方各 swNN 演進細節,這裡只給結論)**:
 - **皮膚十字/光野**:用 TSL `beamPaint`,**身體**畫光野亮區+十字、**承光面(X光板)**只畫柔光野+sun 柔影(無投影十字)。`beamPaint` 用 `if(onSurface)` 編譯期分支。
@@ -108,7 +111,7 @@
 - **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
 - **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
 - **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw14 用「facing 收緊到 smoothstep(0.30,0.62) + 各向異性橢球閘(r 窄/ry 高)」解掉(根因見上方 §0 sw14 段),**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
-- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71,蓋章終圖已出、待上傳)**、(swimmers 待確認)。線上 build = **sw71**(§0 / readout)。
+- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71)+ neck-ap(sw73)蓋章終圖已出、待上傳**、(swimmers 待確認);**elbow-olecranon(sw75)= 起始 pose 待使用者微調**。線上 build = **sw75**(§0 / readout)。
 
 
 ## 1. 這專案在做什麼
