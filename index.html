@@ -748,7 +748,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw72</span><br>` +
+    `<span style="color:#7fd1ff">build sw73</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -794,13 +794,14 @@ const PRESETS = {
     cam: { px: 0.4, py: 1.55, pz: 0.2, tx: -0.9, ty: 1.42, tz: -1.40 }   // 從前方看頸部
   },
   "neck-ap": {
-    label: "頸部前後位 Neck AP(立位,軟組織/氣道)",
+    label: "頸部前後位 Neck AP(立位,軟組織/氣道,SID 140)",
     // SOP(positions.json neck-ap, pending-fill 缺照):直立面向板、下顎抬起(露下頷下軟組織、不擋氣道)、雙肩放鬆下沉;
     //   CR 垂直、正中對 C4(評咽→上移下頷角下;評氣管→下移胸骨上窩);SID 102;準直 枕骨→C7 涵蓋咽喉氣道;用力吐氣。
     //   下顎抬不起時 CR 向頭 10°(替代,大角度會走位)。與 cspine-ap 擺位幾乎相同,差在臨床目的/曝光/準直(較高含氣道)。
-    fig: { x: -0.9, z: -1.40, y: 0, rotY: 0, rotZ: 0 },   // 面向球管;待確認 facing/位置
-    joints: { "l_arm.z": -72, "r_arm.z": -72, "head.x": -15 },   // 雙臂垂放(肩放鬆)、下顎抬高
-    tube: { x: -0.9, z: 0.14, h: 1.52, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.34, beamOn: 1 },  // CR 垂直對 C4;SID ~102;光野窄高(枕骨→C7 含氣道)
+    // 使用者定版(2026-06-21,📋 複製數值原封回填):SID 140(tube.z -0.26)、光野 16×32、下顎抬 head.x -15;蓋章終圖 shots/sealed_neck_ap.png
+    fig: { x: -0.9, z: -1.40, y: 0, rotY: 0, rotZ: 0 },   // 面向球管
+    joints: { "head.x": -15, "l_arm.z": -72, "r_arm.z": -72 },   // 下顎抬高、雙臂垂放(肩放鬆)
+    tube: { x: -0.9, z: -0.26, h: 1.5, pitch: 90, bodyTilt: 0, yaw: 0, fieldW: 0.16, fieldH: 0.32, beamOn: 1, shadowLift: 0, shadowOverhead: 0 },  // 使用者定版 SID 140(z -0.26);CR 垂直對 C4;光野窄高 16×32(枕骨→C7 含氣道)
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 1.35, z: -1.40, rx: 0.18, ry: 0.45, rz: 0.16 },
     cam: { px: 0.4, py: 1.55, pz: 0.2, tx: -0.9, ty: 1.45, tz: -1.40 }   // 從前方看頸部
