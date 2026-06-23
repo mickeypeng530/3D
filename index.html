@@ -382,8 +382,8 @@ const mat = {
   panel:  beamLambert("#f2f4f6"),
   active: beamLambert("#fafcfe"),
   table:  beamLambert("#e6ebef"),
-  casFace: beamLambert("#c6d1da"),                                   // 桌板 cassette 面:淺藍灰(仿 elbow IR 實拍;beamLambert 可顯光野)
-  casRim:  new THREE.MeshLambertMaterial({ color: 0x8b98a4 }),       // 桌板 cassette 細邊框(略深藍灰)
+  casFace: beamLambert("#f5f8fb"),                                   // 桌板 cassette 面:白色(仿 forearm-lateral 實拍 IR;beamLambert 可顯光野)
+  casRim:  new THREE.MeshLambertMaterial({ color: 0xa8aeb4 }),       // 桌板 cassette 灰色金屬外框
   beam:   new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.07, side: THREE.FrontSide, depthWrite: false })   // 單面+低不透明度:避免多層疊成白盤
 };
 
@@ -455,8 +455,8 @@ rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);
 const tblDet = new THREE.Group();
 ROOMG.add(tblDet);
 {
-  rbox(0.46, 0.016, 0.38, 0.006, mat.casRim, 0, TBL.topY + 0.008, 0, tblDet);          // cassette 邊框(淺藍灰、細)
-  const a = box(0.448, 0.005, 0.368, mat.casFace, 0, TBL.topY + 0.018, 0, tblDet);     // cassette 面(淺藍灰,仿 elbow IR;可顯光野)
+  rbox(0.46, 0.016, 0.38, 0.006, mat.casRim, 0, TBL.topY + 0.008, 0, tblDet);          // cassette 灰色金屬外框
+  const a = box(0.43, 0.005, 0.35, mat.casFace, 0, TBL.topY + 0.018, 0, tblDet);       // cassette 白面(仿 forearm-lateral IR;可顯光野)
   a.receiveShadow = true;
 }
 
@@ -750,7 +750,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw76</span><br>` +
+    `<span style="color:#7fd1ff">build sw77</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
