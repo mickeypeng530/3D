@@ -74,7 +74,7 @@
     <h1>X光擺位 3D 模擬器</h1>
     <button id="btnPanelHide" title="收合面板">—</button>
   </div>
-  <div class="hint">滑鼠左鍵旋轉視角 / 右鍵平移 / 滾輪縮放。先選場景預設,再微調關節與球管。手指關節未列入滑桿,可由匯入 JSON 設定。</div>
+  <div class="hint">滑鼠左鍵旋轉視角 / 右鍵平移 / 滾輪縮放。先選場景預設,再微調關節與球管。</div>
 
   <select id="presetSel"></select>
   <div class="btnrow">
@@ -573,7 +573,7 @@ const S = {
 };
 
 /* ============================================================
-   關節(disfigure:joint.x/y/z 度數;手指由 JSON 匯入設定)
+   關節(disfigure:joint.x/y/z 度數)
    ============================================================ */
 const JOINT_DEFS = {
   "頭頸": [
@@ -608,14 +608,8 @@ const JOINT_DEFS = {
   ]
 };
 
-// 手指 path(匯出/匯入 JSON 用)
-const FINGER_PATHS = [];
-for (const side of ["l", "r"]) {
-  FINGER_PATHS.push(`${side}_thumb.x`, `${side}_thumb_tip.x`);
-  for (const f of ["index", "middle", "ring", "pinky"]) {
-    FINGER_PATHS.push(`${side}_${f}.x`, `${side}_${f}_mid.x`, `${side}_${f}_tip.x`);
-  }
-}
+// (手指/腳趾關節 path 已移除:disfigure 的手腳是低模 paddle,指/趾關節物件可寫數值但 mesh 零變形——
+//  實測 90° 彎曲手仍平直,等於死碼。要做 hand/finger/toe view 需換更高細節手腳模型,見 HANDOVER。)
 
 function setJoint(path, v) {
   const [part, axis] = path.split(".");
@@ -625,7 +619,7 @@ function getJoint(path) {
   const [part, axis] = path.split(".");
   return figure[part] ? figure[part][axis] : 0;
 }
-const ALL_PATHS = Object.values(JOINT_DEFS).flat().map(d => d[0]).concat(FINGER_PATHS);
+const ALL_PATHS = Object.values(JOINT_DEFS).flat().map(d => d[0]);
 function resetPose() { for (const p of ALL_PATHS) setJoint(p, 0); }
 
 /* ============================================================
@@ -757,7 +751,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw80</span><br>` +
+    `<span style="color:#7fd1ff">build sw81</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
