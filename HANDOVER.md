@@ -150,6 +150,8 @@
 
 - **嵌入式 preview 初始視窗 0x0** → createStage 後要 `fitViewport()` 強制 resize(已內建)
 - **figure.position.y 是髖根節點不是腳底**:站立時 feet=GL、pos.y≈0.16;坐檯面(0.74m)只要 y 偏移 ≈ -0.03,不是 +0.74
+- 🔴 **disfigure 手腳是低模 paddle,指/趾關節「動不了」(sw81 實測,別再試)**:`figure.l_index`/`r_pinky` 等手指關節物件存在、可寫數值(thumb 全軸、4 指吃 y/z),**但 mesh 對它們零變形**——設 90° 彎曲手仍平直(對照 `shots/finger_test3.png`)。腳趾**連關節都沒有**,只有 `foot.x`(整個前足屈伸)。失效的 `FINGER_PATHS` 已移除(sw81)。
+  - **要做 hand/finger/toe/foot 分趾特寫 view → disfigure 不適合**。選項(research 2026-06-24):① **實拍**(toe/foot/hand 非隱私部位,最划算);② 模組化用 **GLTFLoader 另載 Mixamo / MakeHuman 腳模型**(標準 skinned mesh,`bone.rotation` 擺位;Mixamo 最省事=手指+單一 ToeBase 趾骨,MakeHuman 最解剖但要 FBX→Blender 轉 GLB 且趾骨匯出有 bug)。⚠️ 新模型不會自動有 disfigure 的病人服/皮膚十字/平滑質感,風格不一致、整合工不少。足部 AP/側位「重點在腳擺哪不在分趾」用 disfigure paddle 腳(foot.x)其實夠。
 - **mannequin turn=0 面向 +x**;側位(肩貼後牆板)用 turn 0/180,AP 面向球管(+z)用 -90
 - **SID 從 tubeHead(焦點)起算**,光束視覺長度從準直儀出口(focal -0.24m)起算,別混用
 - **preview_screenshot 工具會 timeout**:用 `tools/shot_server.py`(port 8766)+ `__sim.renderer.render + toDataURL + fetch POST` 自製截圖管道
