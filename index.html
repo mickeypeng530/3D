@@ -757,7 +757,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw86</span><br>` +
+    `<span style="color:#7fd1ff">build sw87</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -793,13 +793,14 @@ const PRESETS = {
   },
   "lspine-extension": {
     label: "腰椎側位 過伸 L-Spine Extension(側臥)",
-    // 本院 SOP(positions.json lspine-extension,Hi-Ta Chan 建):★側臥★、雙手抬起置枕頭上、雙下肢伸展雙膝微彎、
-    //   背對板脊椎平行板、腰/膝下可加墊;伸展位「上身後仰、骨盆後挺、腰段儘量後彎到最大」;CR 同 flexion;SID 102;T12–L5/S1;吐氣末。
-    // 🔑 側臥 = room.lie + fig.rotY -90。★起始 pose:⚠️ 下側手臂目前會垂出檯邊、後彎幅度/相機都待使用者滑桿微調再回填。
-    fig: { x: 0, z: 0.855, y: 0, rotY: -90, rotZ: 0 },
-    joints: { "waist.x": -20, "chest.x": -3, "l_leg.x": 4, "r_leg.x": 8, "l_knee.x": 12, "r_knee.x": 16, "l_arm.x": -42, "r_arm.x": -42, "l_elbow.y": 32, "r_elbow.y": 32 },   // 側臥:腰後彎+腿伸展微屈膝+雙臂前上抬
-    room: { lie: 1, ox: 0.55, oy: 1.47, oz: -0.14 },
-    tube: { x: 0.75, z: 0.50, h: 1.95, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.40, fieldH: 0.24, beamOn: 1 },
+    // 本院 SOP(positions.json lspine-extension,Hi-Ta Chan):★側臥★、雙手抬起置枕、雙下肢伸展雙膝微彎、背對板脊椎平行板;
+    //   伸展位「上身後仰、骨盆後挺、腰段儘量後彎到最大」;CR/光野同 flexion;SID 102;T12–L5/S1;吐氣末。
+    // 🔑 側臥 = room.lie + fig.rotY -90;tableYaw+tube.yaw 對齊頭腳軸。★依 flexion 套版改 extension(腰後彎 -28、腿伸展)——起始 pose,後彎幅度/手臂待使用者滑桿微調再回填。
+    fig: { x: 0.21, z: 0.82, y: -0.3, rotY: -90, rotZ: 0 },
+    joints: { "chest.x": -12, "waist.x": -28, "l_arm.z": -95, "l_arm.x": -60, "l_arm.y": 40, "l_elbow.y": 75, "l_forearm.x": 61, "l_wrist.y": -4, "l_wrist.z": -36, "r_arm.z": -95, "r_arm.x": -60, "r_arm.y": 40, "r_elbow.y": 75, "r_forearm.x": 61, "r_wrist.y": -18, "r_wrist.z": -38, "l_leg.x": 8, "l_leg.z": 2, "l_knee.x": 18, "r_leg.x": 8, "r_leg.z": 2, "r_knee.x": 18 },   // 側臥伸展:腰後彎 -28 + 腿伸展微屈膝 + 雙臂高舉折肘置枕(依 flexion 改)
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: 0.7, z: 0.4, h: 1.94, pitch: 0, bodyTilt: 0, yaw: 63, fieldW: 0.35, fieldH: 0.15, beamOn: 1 },   // CR/yaw/光野同 flexion(對齊脊椎;35×15 含 T12–S1)
+    tableYaw: 63,   // 同 flexion:桌+球管對齊側臥頭腳軸
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     surfaceField: 0, showCross: 1,
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
