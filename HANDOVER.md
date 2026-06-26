@@ -1,6 +1,6 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-24(🆕 **sw83 lspine flexion/extension 側臥 preset**(本院 SOP=側臥,**新發現側臥機制 room.lie + fig.rotY ±90**,見 §4);sw81 清掉失效 FINGER_PATHS(disfigure 指/趾不能動);sw80 elbow-olecranon 定版 SID 100。先前:neck-ap/neck-lateral 定版、桌板 det.h/cassette/surfaceCross。詳見下方)
+> 最後更新:2026-06-27(✅ **sw86/88 lspine flexion + extension 定版 + 蓋章**:側臥、光野照 Clark's p.186/本院 SOP(T12–S1);**側躺患者轉不動→改「轉桌 tableYaw + 轉球管 tube.yaw」對齊頭腳軸(sw85,使用者點子)**,屈伸各自調 yaw(flex 63 / ext -18)。先前:lspine 側臥機制 room.lie+rotY±90(sw83)、disfigure 指/趾不能動(sw81)、elbow-olecranon/neck 定版。詳見 §4)
 > ⚠️ **教訓(sw82→83)**:建 sim preset 前**先讀 `Xray/positions.json` 的本院 SOP**,別憑 LLM 知識——lspine 我先建「立位」是錯的,本院 SOP 是「側臥」。grep 要用對 pattern(`lspine`/`L-SPINE`),別漏。
 
 ## sw34-69:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat(2026-06-15~21)
@@ -95,7 +95,7 @@
 
 ## 0. 接手起點(先讀這段)
 
-**線上版 build 號 `sw83`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=83`)。最近完成:**lspine flexion/extension 側臥起始 preset(sw83,新發現側臥機制)、清 FINGER_PATHS 死碼(sw81)、elbow-olecranon 定版 + 蓋章(sw75-80)、桌板 cassette/det.h/surfaceCross(sw74-79)、neck-ap/neck-lateral 定版(sw71-73)**;早期見頂部 sw34-83 區塊。
+**線上版 build 號 `sw88`**(畫面右側讀數第一行會顯示;快取問題反覆出現;叫他無痕或 `?v=88`)。最近完成:**lspine flexion+extension 定版+蓋章(sw86/88)、桌子旋轉 tableYaw 對齊 workaround(sw85)、lspine 側臥 preset(sw83)、清 FINGER_PATHS(sw81)、elbow-olecranon 定版+蓋章(sw75-80)、桌板 cassette/det.h/surfaceCross(sw74-79)、neck-ap/neck-lateral 定版(sw71-73)**;早期見頂部 sw34-88 區塊。
 
 **目前著色模型(看 §2 swimmer 條與下方各 swNN 演進細節,這裡只給結論)**:
 - **皮膚十字/光野**:用 TSL `beamPaint`,**身體**畫光野亮區+十字、**承光面(X光板)**只畫柔光野+sun 柔影(無投影十字)。`beamPaint` 用 `if(onSurface)` 編譯期分支。
@@ -112,7 +112,7 @@
 - **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
 - **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
 - **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw14 用「facing 收緊到 smoothstep(0.30,0.62) + 各向異性橢球閘(r 窄/ry 高)」解掉(根因見上方 §0 sw14 段),**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
-- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71)+ neck-ap(sw73)+ elbow-olecranon(sw80)蓋章終圖已出、待上傳**、(swimmers 待確認)。線上 build = **sw80**(§0 / readout)。
+- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71)+ neck-ap(sw73)+ elbow-olecranon(sw80)+ lspine-flexion(sw86)+ lspine-extension(sw88)蓋章終圖已出、待上傳(5 張)**、(swimmers 待確認)。線上 build = **sw88**(§0 / readout)。
 
 
 ## 1. 這專案在做什麼
