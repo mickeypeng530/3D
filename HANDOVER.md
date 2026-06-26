@@ -1,6 +1,7 @@
 # X光擺位 3D 模擬器 — 交接文件
 
-> 最後更新:2026-06-24(✅ **sw80 elbow-olecranon 定版**:SID 100、架高桌板 + 板上光野/十字、蓋章 `shots/sealed_olecranon.png`。先前:neck-ap 定版 sw73(SID 140)、neck-lateral 定版 sw71-72(後側拍 SID 150);桌板新功能 det.h 架高(sw74)/cassette 外觀(sw78)/承光面投影十字 surfaceCross(sw79)。詳見下方)
+> 最後更新:2026-06-24(🆕 **sw83 lspine flexion/extension 側臥 preset**(本院 SOP=側臥,**新發現側臥機制 room.lie + fig.rotY ±90**,見 §4);sw81 清掉失效 FINGER_PATHS(disfigure 指/趾不能動);sw80 elbow-olecranon 定版 SID 100。先前:neck-ap/neck-lateral 定版、桌板 det.h/cassette/surfaceCross。詳見下方)
+> ⚠️ **教訓(sw82→83)**:建 sim preset 前**先讀 `Xray/positions.json` 的本院 SOP**,別憑 LLM 知識——lspine 我先建「立位」是錯的,本院 SOP 是「側臥」。grep 要用對 pattern(`lspine`/`L-SPINE`),別漏。
 
 ## sw34-69:骨盆群 + Stenvers + Dunn + inlet/outlet + 頸椎/頸部 AP+Lat(2026-06-15~21)
 - ⚠️ **`cspine-*`(頸椎,看骨)和 `neck-*`(頸部,軟組織/氣道)是獨立 view,別混**(使用者糾正過)。擺位骨架幾乎相同(立位、下巴抬、CR 對 C4),差在臨床目的/曝光/準直/SID。已建起始 preset:cspine-ap(sw56)、neck-ap(sw57)、neck-lateral(sw58);cspine-lateral 早就有。cspine-ap/lateral 主站已有照片,neck-ap/lateral 是缺照(要補)。
@@ -94,7 +95,7 @@
 
 ## 0. 接手起點(先讀這段)
 
-**線上版 build 號 `sw80`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=80`)。最近完成:**elbow-olecranon 定版 SID 100 + 蓋章(sw75-80)、桌板 cassette 外觀 + 承光面投影十字(sw78-79)、桌板架高 det.h(sw74)、neck-ap 定版 SID 140(sw73)、neck-lateral 定版後側拍 SID 150(sw71-72)、垂直十字線鎖骨假橫帶修正(sw70 `crossMid`)**;早期見頂部 sw34-80 區塊。
+**線上版 build 號 `sw83`**(畫面右側讀數第一行會顯示;用來確認使用者看的是不是最新版——快取問題反覆出現;叫他無痕或 `?v=83`)。最近完成:**lspine flexion/extension 側臥起始 preset(sw83,新發現側臥機制)、清 FINGER_PATHS 死碼(sw81)、elbow-olecranon 定版 + 蓋章(sw75-80)、桌板 cassette/det.h/surfaceCross(sw74-79)、neck-ap/neck-lateral 定版(sw71-73)**;早期見頂部 sw34-83 區塊。
 
 **目前著色模型(看 §2 swimmer 條與下方各 swNN 演進細節,這裡只給結論)**:
 - **皮膚十字/光野**:用 TSL `beamPaint`,**身體**畫光野亮區+十字、**承光面(X光板)**只畫柔光野+sun 柔影(無投影十字)。`beamPaint` 用 `if(onSurface)` 編譯期分支。
@@ -192,6 +193,10 @@
   - **左右關節內建鏡像:對稱動作用「同號」**(兩腿內旋 = l_thigh.y 與 r_thigh.y 都 -18;雙臂垂放 = 都 -72)。不要像一般骨架那樣左右反號
 - 🔑🔑 **人偶完全不吃場景燈**(2026-06-14 證實):任何 AmbientLight / DirectionalLight / cameraLight 改 intensity 對人偶零效果(變形綁在材質內,材質不能換)。俯臥/側臥時背光面會全黑。**解法:material.emissiveNode = colorNode × wrap-diffuse 自照亮**(`shade = (normalWorld·Ldir·0.5+0.5)·0.5+0.42`,Ldir≈(0.3,0.85,0.45))→ 任何體位都明亮、又有立體感。改 emissiveNode 後站姿/仰臥/俯臥全部一致變好。**別再花時間調燈去救人偶亮度**
 - **俯臥(prone)= 仰臥 preset 把 fig.rotY 設 180**(臉朝下);頭轉 = head.y;Stenver's/Arcelin 已用此法。scene.background 改色無效(disfigure World 自管 clear)
+- 🔑 **側臥(lateral decubitus)= 臥位 preset 把 `fig.rotY` 設 ±90**(繞身體長軸滾成側躺;**sw83 lspine flexion/extension 首用**):`room.lie + fig.rotY -90` → 人偶側躺檯上,仰臥(0)→側臥(±90)→俯臥(180) 連續。以後 decubitus chest/abdomen 等側臥 view 都用此法。
+  - ⚠️ **滾的方向(90 vs -90)決定肚子朝檯面哪邊**:捲曲(flexion 抱膝)/後彎(extension)要朝**檯面內側**才不會把頭/手垂出檯邊(實測 lspine 用 **-90** 對;90 會垂出)。`room.oz` 微調身體跨檯位置補正。
+  - 側臥下 **`waist.x` 仍是腰前彎(+,flexion)/ 後彎(-,extension)**;`leg.x/knee.x` 抱膝(flexion)或伸展(extension);CR 用球管在上方 `pitch 0` 垂直朝下對 L3(垂直束穿側躺身體=側位投影)。
+  - ⚠️ **側臥兩臂高度不對稱**(一臂上側、一臂下側貼檯),下側臂用同一 arm.x 值易垂出檯邊 → 需逐臂分別調(lspine-extension 起始 pose 此處未完,待使用者微調)。
 - 🔑 **「臉貼板」類直立頭顱 view 的胸口陷板問題(2026-06-14)**:挺直站面對立架時**胸廓比臉更前凸**,硬把臉推到板會讓胸口陷入板內。**解法 = 軀幹前傾 `waist.x +10~14°`(骨盆後、上身靠向立架)+ 人偶 z 後移留前傾空間 + 補調 head.x**(前傾會把頭一起帶前,要多給後仰/點頭補回 SOP 頭角)。因為頭在腰樞紐上方比胸口高 → 前傾每度頭前移 > 胸口,臉先到板而胸口留後方傾斜。Waters 已用(waist.x 10、head.x -26)。Caldwell 同理(前額貼板)可加。**waist.x 正=前傾、負=後仰**
 - ⚠️ **WebGPU 截圖偶爾回傳舊幀**:reload 後第一次要等 ~4s,且 renderOnce 連呼 3 次中間 sleep 50ms 才穩;懷疑卡幀就 location.reload()
 
