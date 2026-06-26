@@ -112,7 +112,7 @@
 - **使用者習慣**:他都在 GitHub live 站看(不看本機);每次改完要他**無痕視窗**或 `?v=數字` 破快取(普通 Ctrl+Shift+R 對 Pages HTML 常破不掉)。改完務必 commit+push,並把 build 號 +1。
 - **使用者偏好自己用滑桿微調**再回報數值,你再寫進 preset。不要替他決定最終角度。
 - **Swimmer's 目前狀態**:側位、近板手高舉/遠手下壓/下顎抬、SID 102 都 OK;十字+光野「畫在皮膚上」的機制已大致正確(見 §2 該條的完整除錯紀錄)。最後卡在「十字只在朝球管的脖子正面、背側(左臂/左脖子)要乾淨、整段頸都要有光野不被切暗」——build sw14 用「facing 收緊到 smoothstep(0.30,0.62) + 各向異性橢球閘(r 窄/ry 高)」解掉(根因見上方 §0 sw14 段),**待使用者確認**。確認後存 `samples/swimmers_final.png` 鎖定。
-- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71)+ neck-ap(sw73)+ elbow-olecranon(sw80)+ lspine-flexion(sw86)+ lspine-extension(sw88)蓋章終圖已出、待上傳(5 張)**、(swimmers 待確認)。線上 build = **sw88**(§0 / readout)。
+- **大方向待辦**:`..\Xray\positions.json` 還有缺照要批次補(已 reviewed 的優先)。已定稿:pelvis-ap、pelvis-frog、pelvis-in-let、pelvis-out-let、dunn-view、dunn-45、stenvers、arcelin、caldwells、waters、styloid、**neck-lateral(sw71)+ neck-ap(sw73)+ elbow-olecranon(sw80)+ lspine-flexion(sw86)+ lspine-extension(sw88)蓋章終圖✅已上傳主站(2026-06-27,使用者自傳 5 張)**、(swimmers 待確認)。線上 build = **sw88**(§0 / readout)。
 
 
 ## 1. 這專案在做什麼
