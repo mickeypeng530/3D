@@ -197,6 +197,7 @@
   - ⚠️ **滾的方向(90 vs -90)決定肚子朝檯面哪邊**:捲曲(flexion 抱膝)/後彎(extension)要朝**檯面內側**才不會把頭/手垂出檯邊(實測 lspine 用 **-90** 對;90 會垂出)。`room.oz` 微調身體跨檯位置補正。
   - 側臥下 **`waist.x` 仍是腰前彎(+,flexion)/ 後彎(-,extension)**;`leg.x/knee.x` 抱膝(flexion)或伸展(extension);CR 用球管在上方 `pitch 0` 垂直朝下對 L3(垂直束穿側躺身體=側位投影)。
   - ⚠️ **側臥兩臂高度不對稱**(一臂上側、一臂下側貼檯),下側臂用同一 arm.x 值易垂出檯邊 → 需逐臂分別調(lspine-extension 起始 pose 此處未完,待使用者微調)。
+  - 🔴🔴 **側躺患者「檯面平面 yaw(頭腳轉向)」做不出來——別再試(2026-06-24 試了 5 法全敗,~22 render)**:disfigure 把根旋轉**烤進變形 shader 的世界座標**(`figure.update()` 時),所以 ① **parent group 旋轉被忽略**、② **figure.update() 之後改 figure.quaternion 不反映**(值有變、畫面不變)、③ figure.update() **之前** premultiply quaternion 會**沉檯**。唯一生效的是 `figure.rotation`(Euler、update 前),但臥位 `rotY=±90` **萬向鎖**:`rotZ`(XYZ)沉檯、`rotX`(XYZ 第一軸/YXZ 第二軸)沉檯或抬離檯。**結論:要側躺 yaw 得改 disfigure 本體或換非烤式 rig,別在現架構硬幹。** 若使用者要「頭尾對調」改用重新定位/`room.ox`,不要用旋轉。
 - 🔑 **「臉貼板」類直立頭顱 view 的胸口陷板問題(2026-06-14)**:挺直站面對立架時**胸廓比臉更前凸**,硬把臉推到板會讓胸口陷入板內。**解法 = 軀幹前傾 `waist.x +10~14°`(骨盆後、上身靠向立架)+ 人偶 z 後移留前傾空間 + 補調 head.x**(前傾會把頭一起帶前,要多給後仰/點頭補回 SOP 頭角)。因為頭在腰樞紐上方比胸口高 → 前傾每度頭前移 > 胸口,臉先到板而胸口留後方傾斜。Waters 已用(waist.x 10、head.x -26)。Caldwell 同理(前額貼板)可加。**waist.x 正=前傾、負=後仰**
 - ⚠️ **WebGPU 截圖偶爾回傳舊幀**:reload 後第一次要等 ~4s,且 renderOnce 連呼 3 次中間 sleep 50ms 才穩;懷疑卡幀就 location.reload()
 
