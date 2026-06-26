@@ -751,7 +751,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw83</span><br>` +
+    `<span style="color:#7fd1ff">build sw84</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -775,9 +775,9 @@ const PRESETS = {
     // 本院 SOP(positions.json lspine-flexion,Hi-Ta Chan 建):★側臥★、雙手抬起置枕頭上、背對偵檢板垂直脊椎與板平行、
     //   腰下/膝下可加墊;屈曲位「雙膝抱向胸口、腰段儘量前彎到最大」;CR 對 L3(下肋緣 / 腸骨嵴上二指)垂直入射;
     //   SID 102;範圍 T12–L5/S1;吐氣末暫停。
-    // 🔑 側臥機制:room.lie + fig.rotY -90(繞身體長軸滾成側躺)。★起始 pose,待使用者滑桿微調手臂/腰彎幅度/相機再 📋 回填。
-    fig: { x: 0, z: 0.855, y: 0, rotY: -90, rotZ: 0 },
-    joints: { "waist.x": 38, "chest.x": 10, "l_leg.x": 68, "r_leg.x": 74, "l_knee.x": 84, "r_knee.x": 90, "l_arm.x": -55, "r_arm.x": -55, "l_elbow.y": 45, "r_elbow.y": 45 },   // 側臥胎位:腰前彎+雙膝抱胸+雙臂前上抬
+    // 🔑 側臥機制:room.lie + fig.rotY -90(繞身體長軸滾成側躺)。使用者微調(2026-06-24,📋 回填):雙臂高舉過頭折肘置枕、身體位移。
+    fig: { x: 0.12, z: 0.84, y: -0.3, rotY: -90, rotZ: 0 },
+    joints: { "waist.x": 38, "chest.x": 10, "l_leg.x": 68, "r_leg.x": 74, "l_knee.x": 84, "r_knee.x": 90, "l_arm.z": -95, "l_arm.x": -55, "l_arm.y": 13, "l_elbow.y": 142, "l_wrist.y": -18, "l_wrist.z": -22, "r_arm.z": -111, "r_arm.x": -55, "r_arm.y": 13, "r_elbow.y": 142, "r_wrist.y": -18, "r_wrist.z": -22 },   // 側臥胎位:腰前彎+雙膝抱胸+雙臂高舉過頭折肘(使用者定)
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
     tube: { x: 0.65, z: 0.50, h: 1.95, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.40, fieldH: 0.24, beamOn: 1 },   // CR 垂直朝下對 L3;光野沿身體長軸含 T12–S1
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
