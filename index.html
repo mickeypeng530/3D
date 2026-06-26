@@ -751,7 +751,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw81</span><br>` +
+    `<span style="color:#7fd1ff">build sw83</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -769,6 +769,33 @@ const PRESETS = {
     ws: { h: 1.50 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: -0.9, y: 0.95, z: -1.40, rx: 0.26, ry: 0.95, rz: 0.16 },
     cam: { px: 1.4, py: 1.8, pz: 1.5, tx: -0.75, ty: 1.4, tz: -1.3 }
+  },
+  "lspine-flexion": {
+    label: "腰椎側位 過屈 L-Spine Flexion(側臥)",
+    // 本院 SOP(positions.json lspine-flexion,Hi-Ta Chan 建):★側臥★、雙手抬起置枕頭上、背對偵檢板垂直脊椎與板平行、
+    //   腰下/膝下可加墊;屈曲位「雙膝抱向胸口、腰段儘量前彎到最大」;CR 對 L3(下肋緣 / 腸骨嵴上二指)垂直入射;
+    //   SID 102;範圍 T12–L5/S1;吐氣末暫停。
+    // 🔑 側臥機制:room.lie + fig.rotY -90(繞身體長軸滾成側躺)。★起始 pose,待使用者滑桿微調手臂/腰彎幅度/相機再 📋 回填。
+    fig: { x: 0, z: 0.855, y: 0, rotY: -90, rotZ: 0 },
+    joints: { "waist.x": 38, "chest.x": 10, "l_leg.x": 68, "r_leg.x": 74, "l_knee.x": 84, "r_knee.x": 90, "l_arm.x": -55, "r_arm.x": -55, "l_elbow.y": 45, "r_elbow.y": 45 },   // 側臥胎位:腰前彎+雙膝抱胸+雙臂前上抬
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: 0.65, z: 0.50, h: 1.95, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.40, fieldH: 0.24, beamOn: 1 },   // CR 垂直朝下對 L3;光野沿身體長軸含 T12–S1
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    surfaceField: 0, showCross: 1,
+    cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
+  },
+  "lspine-extension": {
+    label: "腰椎側位 過伸 L-Spine Extension(側臥)",
+    // 本院 SOP(positions.json lspine-extension,Hi-Ta Chan 建):★側臥★、雙手抬起置枕頭上、雙下肢伸展雙膝微彎、
+    //   背對板脊椎平行板、腰/膝下可加墊;伸展位「上身後仰、骨盆後挺、腰段儘量後彎到最大」;CR 同 flexion;SID 102;T12–L5/S1;吐氣末。
+    // 🔑 側臥 = room.lie + fig.rotY -90。★起始 pose:⚠️ 下側手臂目前會垂出檯邊、後彎幅度/相機都待使用者滑桿微調再回填。
+    fig: { x: 0, z: 0.855, y: 0, rotY: -90, rotZ: 0 },
+    joints: { "waist.x": -20, "chest.x": -3, "l_leg.x": 4, "r_leg.x": 8, "l_knee.x": 12, "r_knee.x": 16, "l_arm.x": -42, "r_arm.x": -42, "l_elbow.y": 32, "r_elbow.y": 32 },   // 側臥:腰後彎+腿伸展微屈膝+雙臂前上抬
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: -0.14 },
+    tube: { x: 0.75, z: 0.50, h: 1.95, pitch: 0, bodyTilt: 0, yaw: 0, fieldW: 0.40, fieldH: 0.24, beamOn: 1 },
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
+    surfaceField: 0, showCross: 1,
+    cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "cspine-swimmers": {
     label: "頸椎泳姿位 Swimmer's(立位側位)",
