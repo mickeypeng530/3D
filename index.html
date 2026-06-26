@@ -454,10 +454,14 @@ wsAll.add(wsCarriage);
    攝影檯 + 檯面偵檢板
    ============================================================ */
 const TBL = { cx: 0.75, cz: 0.55, topY: 0.74, w: 2.2, d: 0.8 };
-rbox(1.35, TBL.topY - 0.10, 0.60, 0.02, mat.metal, TBL.cx, (TBL.topY - 0.10) / 2 + 0.01, TBL.cz);
-rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, TBL.cx, TBL.topY - 0.035, TBL.cz);
+// 桌子旋轉群組:繞桌心垂直軸 yaw。配合球管 tube.yaw,等效於「轉病人」——讓桌長軸對齊側臥病人頭腳軸(disfigure 無法轉病人的 workaround)。
+const tableYawG = new THREE.Group();
+tableYawG.position.set(TBL.cx, 0, TBL.cz);
+ROOMG.add(tableYawG);
+rbox(1.35, TBL.topY - 0.10, 0.60, 0.02, mat.metal, 0, (TBL.topY - 0.10) / 2 + 0.01, 0, tableYawG);
+rbox(TBL.w, 0.07, TBL.d, 0.025, mat.table, 0, TBL.topY - 0.035, 0, tableYawG);
 const tblDet = new THREE.Group();
-ROOMG.add(tblDet);
+tableYawG.add(tblDet);
 {
   rbox(0.46, 0.016, 0.38, 0.007, mat.casRim, 0, TBL.topY + 0.008, 0, tblDet);          // DR 面板淺灰圓角邊框
   const a = box(0.435, 0.006, 0.355, mat.casFace, 0, TBL.topY + 0.017, 0, tblDet);     // DR 面板淺灰面(仿 IR.png;可顯光野)
@@ -569,7 +573,8 @@ const S = {
   ws:   { h: 1.50 },
   det:  { x: 1.38, z: 0.55, on: 0, h: 0 },
   room: { lie: 0, ox: 0, oy: 0, oz: 0 },   // lie=1 -> 房間旋轉(人偶保持站立=圖面上躺下)
-  occl: null   // 身體遮擋橢球 {x,y,z,rx,ry,rz}(房間座標),光野/十字不畫進身體影子
+  occl: null,  // 身體遮擋橢球 {x,y,z,rx,ry,rz}(房間座標),光野/十字不畫進身體影子
+  tableYaw: 0  // 桌子繞桌心 yaw(配球管 yaw=等效轉病人;側臥對齊頭腳軸用)
 };
 
 /* ============================================================
@@ -647,8 +652,9 @@ function applyAll() {
 
   wsAll.position.x = (S.ws.x === undefined ? -0.9 : S.ws.x) + 0.9;
   wsCarriage.position.y = S.ws.h - 1.45;
+  tableYawG.rotation.y = THREE.MathUtils.degToRad(S.tableYaw || 0);   // 桌子旋轉(配球管 yaw = 等效轉病人)
   tblDet.visible = !!S.det.on;
-  tblDet.position.set(S.det.x, S.det.h || 0, S.det.z);   // h = 架高桌板(0=貼檯面;站姿手臂 view 可架高到手肘)
+  tblDet.position.set(S.det.x - TBL.cx, S.det.h || 0, S.det.z - TBL.cz);   // tblDet 現為 tableYawG 子物件,改相對桌心;h=架高桌板
 
   tubeRig.position.set(S.tube.x, 0, S.tube.z);
   tubeRig.rotation.y = THREE.MathUtils.degToRad(S.tube.yaw);
@@ -751,7 +757,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw84</span><br>` +
+    `<span style="color:#7fd1ff">build sw85</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -1108,6 +1114,7 @@ function applyPreset(key) {
   S.surfaceCross = p.surfaceCross || 0;   // 承光面投影十字(預設關;olecranon 等開)
   S.showCross = (p.showCross === undefined) ? 1 : p.showCross;
   S.crossMid = p.crossMid || 0;   // 垂直線改用身體前正中線(避免鎖骨相切糊;neck-lateral)
+  S.tableYaw = p.tableYaw || 0;   // 桌子旋轉歸零(preset 沒指定就不殘留)
   S.paintGate = p.paintGate ? { ...p.paintGate } : null;   // 範圍閘(只在頸部畫)
   S.beamShadow = p.beamShadow || 0;                        // 陰影對齊光束
   S.mouthOpen = p.mouthOpen || 0;                          // 張口示意(styloid)
@@ -1347,6 +1354,7 @@ for (const [title, defs] of Object.entries(JOINT_DEFS)) {
   addSlider(g, "檯板 X (m)", -0.4, 2.0, 0.01, () => S.det.x, v => S.det.x = v);
   addSlider(g, "檯板 Z (m)", 0.1, 1.0, 0.01, () => S.det.z, v => S.det.z = v);
   addSlider(g, "檯板高度 (m)", 0, 0.9, 0.01, () => (S.det.h || 0), v => S.det.h = v);   // 0=貼檯面;架高給站姿手臂 view(olecranon 等)
+  addSlider(g, "桌子旋轉(配球管=轉病人)", -90, 90, 1, () => (S.tableYaw || 0), v => S.tableYaw = v);   // 繞桌心 yaw;側臥對齊頭腳軸
 }
 
 /* ============================================================
