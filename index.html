@@ -757,7 +757,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw89</span><br>` +
+    `<span style="color:#7fd1ff">build sw90</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -895,11 +895,11 @@ const PRESETS = {
     label: "薦椎前後位 Sacrum AP(仰臥,CR 向頭 15°)",
     // 本院 SOP(positions.json sacrum-ap,Hi-Ta Chan/吳芝瑩):仰臥、正中矢狀面對 Bucky 中線、兩 ASIS 等高(不旋轉)、膝下墊軟墊屈膝(降骨盆前傾)。
     //   CR 向頭 15°、恥骨聯合上 5cm(骨盆後傾/傾斜大者用 20°);SID 102;範圍全薦骨 S1–S5、薦骨孔開放、SI joint 對稱。positioning_photo 缺照。
-    // 仰臥=room.lie;CR 向頭傾用 crTilt -15(臥位:負=cephalad/向頭)。★起始 pose,待使用者滑桿微調 CR 位置/角度/光野再 📋 回填。
+    // 仰臥=room.lie;CR 向頭傾用 crTilt -15(臥位:負=cephalad/向頭)。✅ 使用者定版(2026-06-27,📋 回填):CR 移到薦椎(tube.x 0.77)、雙臂交疊胸前清出腹部、光野 25×24。
     fig: { x: 0, z: 0.855, y: 0, rotY: 0, rotZ: 0 },
-    joints: { "l_arm.z": -72, "r_arm.z": -72, "l_leg.x": 12, "r_leg.x": 12, "l_knee.x": 22, "r_knee.x": 22 },   // 雙臂垂放;膝下墊軟墊微屈膝(降骨盆前傾)
+    joints: { "l_arm.z": -52, "l_arm.x": 25, "l_arm.y": 45, "l_elbow.y": 117, "l_forearm.x": -4, "l_wrist.y": -5, "l_wrist.z": -25, "r_arm.z": -52, "r_arm.x": 25, "r_arm.y": 45, "r_elbow.y": 117, "r_forearm.x": -4, "r_wrist.y": -5, "r_wrist.z": -25, "l_leg.x": 12, "l_knee.x": 22, "r_leg.x": 12, "r_knee.x": 22 },   // 雙臂交疊胸前(清出腹部)+ 膝下墊微屈膝
     room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
-    tube: { x: 0.58, z: 0.55, h: 1.76, pitch: 0, crTilt: -15, bodyTilt: 0, yaw: 0, fieldW: 0.18, fieldH: 0.24, beamOn: 1, shadowOverhead: 1 },   // CR 向頭 15°(crTilt -15)對恥骨上 5cm/薦椎;光野含 S1–S5;shadowOverhead 影子置中
+    tube: { x: 0.77, z: 0.55, h: 1.76, pitch: 0, crTilt: -15, bodyTilt: 0, yaw: 0, fieldW: 0.25, fieldH: 0.24, beamOn: 1, shadowOverhead: 1 },   // 使用者定版:CR 向頭 15° 對薦椎(tube.x 0.77);光野 25×24 含 S1–S5;shadowOverhead 影子置中
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
     surfaceField: 1, showCross: 1,
