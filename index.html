@@ -757,7 +757,7 @@ function applyAll() {
   if (figure.update) figure.update();
 
   document.getElementById("readout").innerHTML =
-    `<span style="color:#7fd1ff">build sw90</span><br>` +
+    `<span style="color:#7fd1ff">build sw91</span><br>` +
     `SID:<b>${sidTxt}</b><br>` +
     `球管:高 <b>${(S.tube.h).toFixed(2)} m</b>,CR 傾角 <b>${crDeg}&deg;</b>,旋轉 <b>${S.tube.yaw}&deg;</b><br>` +
     `光野:<b>${Math.round(S.tube.fieldW * 100)} x ${Math.round(S.tube.fieldH * 100)} cm</b>`;
@@ -903,6 +903,20 @@ const PRESETS = {
     ws: { h: 1.45, x: -2.3 }, det: { x: 1.38, z: 0.55, on: 0 },
     occl: { x: 0.6, y: 0.87, z: 0.55, rx: 0.92, ry: 0.14, rz: 0.22 },
     surfaceField: 1, showCross: 1,
+    cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
+  },
+  "sacrum-lateral": {
+    label: "薦椎側位 Sacrum Lateral(側臥)",
+    // 本院 SOP(LIVE Firestore,2026-06 同事更新):★右側臥★、雙手抬起置枕、膝髖略屈穩定;軀幹背側垂直板、脊椎平行板(胸腔/骨盆不旋轉);偵檢板中心對薦椎中點。
+    //   CR 垂直入射(無傾角)、對 ASIS 後 8–10cm / 正中線(=薦椎;PSIS–薦尾關節連線中點);SID 102;範圍 L5/S1→尾骨;坐骨大切跡+股骨頭對稱重疊=不旋轉。positioning_photo 缺照。
+    // 側臥=room.lie + fig.rotY -90;脊椎中立(非屈伸,別套 lspine 的 waist.x);CR 無 crTilt。tableYaw+tube.yaw 對齊頭腳軸(身體較直≈extension,起 -18 待調)。★起始 pose,待使用者微調 CR 位置/對齊/光野/SID 再 📋 回填。
+    fig: { x: 0, z: 0.82, y: -0.3, rotY: -90, rotZ: 0 },
+    joints: { "l_arm.z": -61, "l_arm.x": -90, "l_arm.y": 40, "l_elbow.y": 75, "l_forearm.x": 61, "l_wrist.y": 10, "l_wrist.z": -5, "r_arm.z": -61, "r_arm.x": -90, "r_arm.y": 40, "r_elbow.y": 75, "r_forearm.x": 61, "r_wrist.y": -18, "r_wrist.z": -38, "l_leg.x": 38, "l_leg.z": 2, "l_knee.x": 70, "r_leg.x": 38, "r_leg.z": 2, "r_knee.x": 70 },   // 側臥中立脊椎(無屈伸)+ 膝髖略屈穩定 + 雙臂抬枕
+    room: { lie: 1, ox: 0.55, oy: 1.47, oz: 0 },
+    tube: { x: 0.62, z: 0.51, h: 1.76, pitch: 0, bodyTilt: 0, yaw: 70, fieldW: 0.18, fieldH: 0.20, beamOn: 1 },   // CR 垂直(無傾)對薦椎;yaw 70 對齊;光野含 L5/S1→尾骨;h1.76≈SID 102
+    tableYaw: -18,   // 對齊側臥頭腳軸(起始值,待使用者重調)
+    ws: { h: 1.45, x: -2.3 }, det: { x: 1.34, z: 0.55, on: 0 },
+    surfaceField: 0, showCross: 1,
     cam: { px: 1.9, py: 2.0, pz: 2.3, tx: 0.6, ty: 0.7, tz: 0.45 }
   },
   "pelvis-frog": {
